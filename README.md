@@ -1,2 +1,3 @@
 # chess-on-go
-Chess using Golang
+
+Just trying this out with Golang...
