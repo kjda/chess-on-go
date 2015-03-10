@@ -123,7 +123,9 @@ func (b *Board) ToFen() string {
 				pieces += strconv.Itoa(emptyCount)
 			}
 		}
-		pieces += "/"
+		if rank < 7 {
+			pieces += "/"
+		}
 	}
 
 	if b.Turn == WHITE {
