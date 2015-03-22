@@ -51,6 +51,16 @@ var DIRECTION_SHIFT = [8][2]int{}
 //Tells which bit is the blocking bit in every direction
 var DIRECTION_LSB_MSP = [8]uint{}
 
+var KING_RANK_FILE_SHIFTS = [8][2]int{
+	{-1, -1}, {0, -1}, {1, -1}, {-1, 0},
+	{1, 0}, {-1, 1}, {0, 1}, {1, 1},
+}
+
+var KNIGHT_RANK_FILE_SHIFTS = [8][2]int{
+	{-2, -1}, {-2, 1}, {2, -1}, {2, 1},
+	{-1, -2}, {-1, 2}, {1, -2}, {1, 2},
+}
+
 func init() {
 	DIRECTION_LSB_MSP[DIRECTION_N] = LSB
 	DIRECTION_LSB_MSP[DIRECTION_NE] = LSB
