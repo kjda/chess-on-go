@@ -17,11 +17,9 @@ func main() {
 	chessongo.PrintBitboard(chessongo.Bitboard(0x1<<b.EnPassant), "ENPASSANR")
 	var elapsed time.Duration
 	start := time.Now()
-	for i := 0; i < 1; i++ {
-		b.GenerateLegalMoves()
-	}
+	b.GenerateLegalMoves()
 	elapsed = time.Since(start)
-	fmt.Printf("\nTIME %s \n", elapsed)
+	fmt.Printf("\nLegalMoves Generated in: %s \n", elapsed)
 
 	fmt.Println("FEN: ", b.ToFen())
 }

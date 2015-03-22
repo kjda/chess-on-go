@@ -18,21 +18,13 @@ var PIECE_TO_RUNE = map[Piece]rune{
 	B_PAWN: 'p', B_KNIGHT: 'n', B_BISHOP: 'b', B_ROOK: 'r', B_QUEEN: 'q', B_KING: 'k',
 }
 
-var RUNE_TO_FILE = map[rune]int{
-	'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7,
-}
+var RUNE_TO_FILE = map[rune]int{'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
 
-var RUNE_TO_RANK = map[rune]int{
-	'1': 7, '2': 6, '3': 5, '4': 4, '5': 3, '6': 2, '7': 1, '8': 0,
-}
+var RUNE_TO_RANK = map[rune]int{'1': 7, '2': 6, '3': 5, '4': 4, '5': 3, '6': 2, '7': 1, '8': 0}
 
-var FILE_TO_STRING = map[int]string{
-	0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "h",
-}
+var FILE_TO_STRING = map[int]string{0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "f", 6: "g", 7: "h"}
 
-var RANK_TO_STRING = map[int]string{
-	0: "8", 1: "7", 2: "6", 3: "5", 4: "4", 5: "3", 6: "2", 7: "1",
-}
+var RANK_TO_STRING = map[int]string{0: "8", 1: "7", 2: "6", 3: "5", 4: "4", 5: "3", 6: "2", 7: "1"}
 
 //initialize board from Fen string
 func (b *Board) InitFromFen(fen string) error {
@@ -129,12 +121,12 @@ func (b *Board) ToFen() string {
 	}
 
 	if b.Turn == WHITE {
-		turn += "w"
+		turn = "w"
 	} else {
-		turn += "b"
+		turn = "b"
 	}
 
-	castling += ""
+	castling = ""
 	if (b.Castling & CASTLE_WKS) > 0 {
 		castling += "K"
 	}
@@ -147,13 +139,15 @@ func (b *Board) ToFen() string {
 	if (b.Castling & CASTLE_BQS) > 0 {
 		castling += "q"
 	}
+	if len(castling) == 0 {
+		castling = "-"
+	}
 
 	if b.EnPassant == 0 {
 		enPassant = "-"
 	} else {
 		rank, file := squareCoords(b.EnPassant)
-		enPassant = FILE_TO_STRING[file]
-		enPassant += RANK_TO_STRING[rank]
+		enPassant = FILE_TO_STRING[file] + RANK_TO_STRING[rank]
 	}
 
 	return fmt.Sprintf("%s %s %s %s %d %d", pieces, turn, castling, enPassant, b.HalfMoves, b.FullMoves)
