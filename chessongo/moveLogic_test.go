@@ -4,7 +4,6 @@ import (
 	"testing"
 )
 
-//go test -test.bench=".*" -test.cpu="8"
 func Benchmark_GenerateLegalMoves(b *testing.B) {
 
 	b.RunParallel(func(pb *testing.PB) {
