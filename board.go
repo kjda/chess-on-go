@@ -42,7 +42,7 @@ type Board struct {
 }
 
 func (b *Board) Reset() {
-	b.Fen = STARTING_POSITION_FEN
+	b.Fen = ""
 	b.WhitePieces = Bitboard(0)
 	b.BlackPieces = Bitboard(0)
 	for _, kind := range [6]Piece{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING} {
