@@ -19,3 +19,22 @@ func CoordsToIndex(rank, file int) uint {
 func squareCoords(sq Square) (int, int) {
 	return int(sq) / 8, int(sq) % 8
 }
+
+var FILES = map[int]rune{
+	0: 'a',
+	1: 'b',
+	2: 'c',
+	3: 'd',
+	4: 'e',
+	5: 'f',
+	6: 'g',
+	7: 'h',
+}
+
+func file(sq Square) rune {
+	return FILES[sq.file()]
+}
+
+func rank(sq Square) int {
+	return 8 - sq.rank()
+}

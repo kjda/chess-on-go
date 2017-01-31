@@ -31,6 +31,7 @@ var RANK_TO_STRING = map[int]string{0: "8", 1: "7", 2: "6", 3: "5", 4: "4", 5: "
 //initialize board from Fen string
 func (b *Board) InitFromFen(fen string) error {
 	b.Reset()
+	b.Fen = fen
 	fen = strings.Trim(fen, " ")
 	parts := strings.Split(fen, " ")
 	if len(parts) != 6 {

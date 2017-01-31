@@ -7,32 +7,32 @@ const (
 )
 
 const (
-	EMPTY = iota
-	PAWN
-	KNIGHT
-	BISHOP
-	ROOK
-	QUEEN
-	KING
+	EMPTY  = iota // 000
+	PAWN          // 001
+	KNIGHT        // 010
+	BISHOP        // 011
+	ROOK          // 100
+	QUEEN         // 101
+	KING          // 110
 )
 
 const WHITE_MASK = 0x8
 const BLACK_MASK = 0x10
 
 const (
-	W_PAWN   = WHITE | PAWN   //1001
-	W_KNIGHT = WHITE | KNIGHT //1010
-	W_BISHOP = WHITE | BISHOP
-	W_ROOK   = WHITE | ROOK
-	W_QUEEN  = WHITE | QUEEN
-	W_KING   = WHITE | KING
+	W_PAWN   = WHITE | PAWN   // 01001
+	W_KNIGHT = WHITE | KNIGHT // 01010
+	W_BISHOP = WHITE | BISHOP // 01011
+	W_ROOK   = WHITE | ROOK   // 01100
+	W_QUEEN  = WHITE | QUEEN  // 01101
+	W_KING   = WHITE | KING   // 01110
 
-	B_PAWN   = BLACK | PAWN   //10001
-	B_KNIGHT = BLACK | KNIGHT //10010
-	B_BISHOP = BLACK | BISHOP
-	B_ROOK   = BLACK | ROOK
-	B_QUEEN  = BLACK | QUEEN
-	B_KING   = BLACK | KING
+	B_PAWN   = BLACK | PAWN   // 10001
+	B_KNIGHT = BLACK | KNIGHT // 10010
+	B_BISHOP = BLACK | BISHOP // 10011
+	B_ROOK   = BLACK | ROOK   // 10100
+	B_QUEEN  = BLACK | QUEEN  // 10101
+	B_KING   = BLACK | KING   // 10110
 )
 
 type Color uint8
@@ -62,5 +62,9 @@ func (p Piece) color() Color {
 }
 
 func (p Piece) toRune() rune {
-	return PIECE_TO_RUNE[p]
+	r, ok := PIECE_TO_RUNE[p]
+	if !ok {
+		return ' '
+	}
+	return r
 }

@@ -8,13 +8,13 @@ func PrintBitboard(bb Bitboard, title string) {
 	var shiftMask uint64 = 1
 	//bb.printB("pp2")
 	fmt.Printf("________________%s_______________________\n", title)
-	for rank := 7; rank >= 0; rank-- {
-		for file := 7; file >= 0; file-- {
-			var squareIdx uint = uint(rank*8 + file)
+	for r := 7; r >= 0; r-- {
+		for f := 7; f >= 0; f-- {
+			var squareIdx uint = uint(r*8 + f)
 			if bb&Bitboard(shiftMask<<squareIdx) > 0 {
-				fmt.Printf(" X ")
+				fmt.Printf("%c%d: X ", file(Square(squareIdx)), rank(Square(squareIdx)))
 			} else {
-				fmt.Printf(" _ ")
+				fmt.Printf("%c%d: _ ", file(Square(squareIdx)), rank(Square(squareIdx)))
 			}
 		}
 		fmt.Println("")
@@ -24,22 +24,17 @@ func PrintBitboard(bb Bitboard, title string) {
 
 func (b *Board) PrintBoard(title string) {
 	fmt.Printf("________________%s_______________________\n", title)
-	for rank := 7; rank >= 0; rank-- {
-		for file := 7; file >= 0; file-- {
-			var squareIdx uint = uint(rank*8 + file)
-			if b.Squares[squareIdx] == EMPTY {
-				fmt.Printf(" -- ")
-			} else {
-				color := 'b'
-				if b.Squares[squareIdx].color() == WHITE {
-					color = 'w'
-				}
-				fmt.Printf(" %c%c ", color, PIECE_TO_RUNE[b.Squares[squareIdx]])
-			}
+	for i, v := range b.Squares {
+		if i%8 == 0 {
+			fmt.Println("")
 		}
-		fmt.Println("")
-
+		if v.toRune() == ' ' {
+			fmt.Printf("   %c%d:-   ", file(Square(i)), rank(Square(i)))
+		} else {
+			fmt.Printf("   %c%d:%c   ", file(Square(i)), rank(Square(i)), v.toRune())
+		}
 	}
+	fmt.Printf("\n_______________________________________\n")
 }
 
 func log(msg string) {
