@@ -52,47 +52,47 @@ func Test_GenerateLegalMoves(t *testing.T) {
 func Test_GenerateKing(t *testing.T) {
 	var positions = map[string][]string{
 		"8/8/8/8/8/8/8/7K w  - 0 0": []string{
-			"H1 H2",
-			"H1 G1",
-			"H1 G2",
+			"h1 h2",
+			"h1 g1",
+			"h1 g2",
 		},
 		"8/8/8/8/8/8/8/6K1 w  - 0 0": []string{
-			"G1 H1",
-			"G1 H2",
-			"G1 G2",
-			"G1 F1",
-			"G1 F2",
+			"g1 h1",
+			"g1 h2",
+			"g1 g2",
+			"g1 f1",
+			"g1 f2",
 		},
 		"K7/8/8/8/8/8/8/8 w  - 0 0": []string{
-			"A8 B8",
-			"A8 B7",
-			"A8 A7",
+			"a8 b8",
+			"a8 b7",
+			"a8 a7",
 		},
 		"8/8/3K4/8/8/8/8/8 w  - 0 0": []string{
-			"D6 E5",
-			"D6 E6",
-			"D6 E7",
-			"D6 C5",
-			"D6 C6",
-			"D6 C7",
-			"D6 D5",
-			"D6 D7",
+			"d6 e5",
+			"d6 e6",
+			"d6 e7",
+			"d6 c5",
+			"d6 c6",
+			"d6 c7",
+			"d6 d5",
+			"d6 d7",
 		},
 		"8/8/3K4/8/8/4q3/8/8 w  - 0 0": []string{
-			"D6 C6",
-			"D6 C7",
-			"D6 D5",
-			"D6 D7",
+			"d6 c6",
+			"d6 c7",
+			"d6 d5",
+			"d6 d7",
 		},
 		"n7/8/3K4/n7/8/1b2q3/8/8 w  - 0 0": []string{
-			"D6 D7",
+			"d6 d7",
 		},
 		"8/6n1/3K4/n7/q7/1b6/8/2r5 w  - 0 0": []string{
-			"D6 E5",
-			"D6 E7",
+			"d6 e5",
+			"d6 e7",
 		},
 		"7N/8/4k3/4n3/1B4K1/8/3R4/4R3 b  - 0 0": []string{
-			"E6 F6",
+			"e6 f6",
 		},
 	}
 
@@ -113,7 +113,7 @@ func Test_GenerateKing(t *testing.T) {
 					found = true
 				}
 			}
-			msg := fmt.Sprintf("Expected to find move %s for [%s]", expectedMove, fen)
+			msg := fmt.Sprintf("expected to find move %s for [%s]", expectedMove, fen)
 			assert.Equal(t, found, true, msg)
 		}
 		//fmt.Printf("\n\n")
