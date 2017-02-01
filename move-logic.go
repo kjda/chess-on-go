@@ -2,8 +2,8 @@ package chessongo
 
 var genMovesCalls uint = 0
 
-//Generate all legal moves
-func (b *Board) GenerateLegalMoves() {
+//Generate all peseudo moves
+func (b *Board) GeneratePseudoMoves() {
 	var ours [7]Bitboard
 	var oursAll Bitboard
 	if b.Turn == WHITE {
@@ -13,7 +13,7 @@ func (b *Board) GenerateLegalMoves() {
 		ours = b.Blacks
 		oursAll = b.BlackPieces
 	}
-
+	b.PseudoMoves = []Move{}
 	b.genPawnOneStep()
 	b.genPawnTwoSteps()
 	b.genPawnAttacks()
@@ -22,7 +22,11 @@ func (b *Board) GenerateLegalMoves() {
 	b.genRayMoves(ours[BISHOP]|ours[QUEEN], oursAll, BISHOP_DIRECTIONS[:])
 	b.genRayMoves(ours[ROOK]|ours[QUEEN], oursAll, ROOK_DIRECTIONS[:])
 	b.genCastling()
+}
 
+//Generate all legal moves
+func (b *Board) GenerateLegalMoves() {
+	b.GeneratePseudoMoves()
 	b.LegalMoves = []Move{}
 	for _, move := range b.PseudoMoves {
 		if b.CanMove(move) {
@@ -71,30 +75,25 @@ func (b *Board) genRayMoves(pieces, ours Bitboard, directions []Direction) {
 //Generate castling pseudo-legal moves
 func (b *Board) genCastling() {
 	if b.Turn == WHITE && (b.Castling&CASTLE_WKS) > 0 && (b.Occupied&(0x3<<61)) == 0 {
-		//@todo: generate move
 		from := Square(b.Whites[KING].lsbIndex())
 		to := Square(WKS_KING_SQUARE)
 		b.PseudoMoves = append(b.PseudoMoves, NewCastlingMove(from, to))
 
 	}
+
 	if b.Turn == WHITE && (b.Castling&CASTLE_WQS) > 0 && (b.Occupied&(0x7<<57)) == 0 {
-		//@todo: generate move
 		from := Square(b.Whites[KING].lsbIndex())
 		to := Square(WQS_KING_SQUARE)
 		b.PseudoMoves = append(b.PseudoMoves, NewCastlingMove(from, to))
 	}
 
 	if b.Turn == BLACK && (b.Castling&CASTLE_BKS) > 0 && (b.Occupied&(0x3<<5)) == 0 {
-		//@todo: generate move
 		from := Square(b.Blacks[KING].lsbIndex())
 		to := Square(BKS_KING_SQUARE)
-		//fmt.Print("KING SIDE:", from, ",", to, "!")
 		b.PseudoMoves = append(b.PseudoMoves, NewCastlingMove(from, to))
 	}
 
 	if b.Turn == BLACK && (b.Castling&CASTLE_BQS) > 0 && (b.Occupied&(0x7<<1)) == 0 {
-		//@todo: generate move
-
 		from := Square(b.Blacks[KING].lsbIndex())
 		to := Square(BQS_KING_SQUARE)
 		b.PseudoMoves = append(b.PseudoMoves, NewCastlingMove(from, to))
