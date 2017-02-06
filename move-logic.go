@@ -1,5 +1,7 @@
 package chessongo
 
+import "fmt"
+
 var genMovesCalls uint = 0
 
 //Generate all peseudo moves
@@ -76,26 +78,26 @@ func (b *Board) genRayMoves(pieces, ours Bitboard, directions []Direction) {
 func (b *Board) genCastling() {
 	if b.Turn == WHITE && (b.Castling&CASTLE_WKS) > 0 && (b.Occupied&(0x3<<61)) == 0 {
 		from := Square(b.Whites[KING].lsbIndex())
-		to := Square(WKS_KING_SQUARE)
+		to := Square(WKS_KING_TO_SQUARE)
 		b.PseudoMoves = append(b.PseudoMoves, NewCastlingMove(from, to))
 
 	}
 
 	if b.Turn == WHITE && (b.Castling&CASTLE_WQS) > 0 && (b.Occupied&(0x7<<57)) == 0 {
 		from := Square(b.Whites[KING].lsbIndex())
-		to := Square(WQS_KING_SQUARE)
+		to := Square(WQS_KING_TO_SQUARE)
 		b.PseudoMoves = append(b.PseudoMoves, NewCastlingMove(from, to))
 	}
 
 	if b.Turn == BLACK && (b.Castling&CASTLE_BKS) > 0 && (b.Occupied&(0x3<<5)) == 0 {
 		from := Square(b.Blacks[KING].lsbIndex())
-		to := Square(BKS_KING_SQUARE)
+		to := Square(BKS_KING_TO_SQUARE)
 		b.PseudoMoves = append(b.PseudoMoves, NewCastlingMove(from, to))
 	}
 
 	if b.Turn == BLACK && (b.Castling&CASTLE_BQS) > 0 && (b.Occupied&(0x7<<1)) == 0 {
 		from := Square(b.Blacks[KING].lsbIndex())
-		to := Square(BQS_KING_SQUARE)
+		to := Square(BQS_KING_TO_SQUARE)
 		b.PseudoMoves = append(b.PseudoMoves, NewCastlingMove(from, to))
 	}
 	return
@@ -161,8 +163,17 @@ func (b *Board) genPawnAttacks() {
 		for targets > 0 {
 			to := Square(targets.popLSB())
 			from := Square(int(to) + fromShift)
+			if from.rank() == to.rank() {
+				continue
+			}
 			if b.EnPassant > 0 && to == b.EnPassant {
-				b.PseudoMoves = append(b.PseudoMoves, NewEnPassantMove(from, to, b.Squares[to]))
+				var capturedSq Square
+				if b.Turn == WHITE {
+					capturedSq = to + 8
+				} else {
+					capturedSq = to - 8
+				}
+				b.PseudoMoves = append(b.PseudoMoves, NewEnPassantMove(from, to, b.Squares[capturedSq]))
 			} else {
 				b.PseudoMoves = append(b.PseudoMoves, NewMove(from, to, b.Squares[to]))
 			}
@@ -249,22 +260,108 @@ func (b *Board) isCheckedFromRay(target, attackers Bitboard, directions []Direct
 
 //Checks whether the given move is possible or not
 func (b *Board) CanMove(m Move) bool {
-	clone := CloneBoard(b)
-	clone.MakeMove(m)
-	return !clone.ComputeIsCheck()
+	if m.isCastlingMove() {
+		var inBetweenSq Square
+		if m.to() == WKS_KING_TO_SQUARE || m.to() == BQS_KING_TO_SQUARE {
+			inBetweenSq = m.from() + 1
+		} else if m.to() == WQS_KING_TO_SQUARE || m.to() == BQS_KING_TO_SQUARE {
+			inBetweenSq = m.from() - 1
+		}
+		inBetweenMove := NewMove(m.from(), inBetweenSq, EMPTY)
+		if b.IsCheck || b.WillMoveCauseCheck(inBetweenMove) {
+			return false
+		}
+	}
+	return !b.WillMoveCauseCheck(m)
 }
 
-//Makes a move without updating board status
+func (b *Board) WillMoveCauseCheck(m Move) bool {
+	clone := CloneBoard(b)
+	clone.justMove(m)
+	return clone.ComputeIsCheck() == true
+}
+
+//
 func (b *Board) MakeMove(m Move) {
+	b.justMove(m)
+	kind := b.Squares[m.to()].Kind()
+	if kind == KING {
+		if b.Turn == WHITE {
+			b.Castling &= ^(CASTLE_WKS | CASTLE_WQS)
+		} else {
+			b.Castling &= ^(CASTLE_BKS | CASTLE_BQS)
+		}
+	}
+	if kind == ROOK {
+		switch m.from() {
+		case WKS_ROOK_ORIGINAL_SQUARE:
+			b.Castling &= ^CASTLE_WKS
+		case WQS_ROOK_ORIGINAL_SQUARE:
+			b.Castling &= ^CASTLE_WQS
+		case BKS_ROOK_ORIGINAL_SQUARE:
+			b.Castling &= ^CASTLE_BKS
+		case BQS_ROOK_ORIGINAL_SQUARE:
+			b.Castling &= ^CASTLE_BQS
+		}
+	}
+
+	switch m.to() {
+	case WKS_ROOK_ORIGINAL_SQUARE:
+		fmt.Println("ROOK TO WKS_ROOK_ORIGINAL_SQUARE")
+		b.Castling &= ^CASTLE_WKS
+	case WQS_ROOK_ORIGINAL_SQUARE:
+		fmt.Println("ROOK TO WQS_ROOK_ORIGINAL_SQUARE")
+		b.Castling &= ^CASTLE_WQS
+	case BKS_ROOK_ORIGINAL_SQUARE:
+		fmt.Println("ROOK TO BKS_ROOK_ORIGINAL_SQUARE")
+		b.Castling &= ^CASTLE_BKS
+	case BQS_ROOK_ORIGINAL_SQUARE:
+		fmt.Println("ROOK TO BQS_ROOK_ORIGINAL_SQUARE")
+		b.Castling &= ^CASTLE_BQS
+	}
+	// enPassant target
+	b.EnPassant = 0
+	if kind == PAWN && b.Turn == WHITE {
+		if m.from().rank() == 6 && m.to().rank() == 4 {
+			b.EnPassant = m.from() - 8
+		}
+	}
+	if kind == PAWN && b.Turn == BLACK {
+		if m.from().rank() == 1 && m.to().rank() == 3 {
+			b.EnPassant = m.from() + 8
+		}
+	}
+
+	if b.Turn == WHITE {
+		b.Turn = BLACK
+	} else {
+		b.Turn = WHITE
+	}
+
+	b.GenerateLegalMoves()
+
+	b.IsCheck = b.ComputeIsCheck()
+	b.IsCheckmate = b.IsCheck && !b.hasMoves()
+	b.IsStalement = !b.IsCheckmate && !b.hasMoves()
+}
+
+//
+func (b *Board) justMove(m Move) {
 	from := m.from()
 	to := m.to()
-	captured := m.captured()
+	//capturedPiece := m.captured()
+	capturedPiece := b.Squares[to]
+	if m.isEnPassant() && b.Turn == WHITE {
+		capturedPiece = b.Squares[to+8]
+	} else if m.isEnPassant() && b.Turn == BLACK {
+		capturedPiece = b.Squares[to-8]
+	}
 	notFromBB := ^Bitboard(0x1 << from)
 	toBB := Bitboard(0x1 << to)
 
 	movingPiece := b.Squares[from]
-	movingPieceKind := movingPiece.kind()
-	switch movingPiece.color() {
+	movingPieceKind := movingPiece.Kind()
+	switch movingPiece.Color() {
 	case WHITE:
 		b.Whites[movingPieceKind] &= notFromBB
 		b.Whites[movingPieceKind] |= toBB
@@ -282,8 +379,18 @@ func (b *Board) MakeMove(m Move) {
 
 	b.Squares[m.to()] = b.Squares[m.from()]
 	b.Squares[m.from()] = EMPTY
-	if captured != EMPTY {
-		b.capturePiece(to, captured)
+	if capturedPiece != EMPTY {
+		if !m.isEnPassant() {
+			b.capturePiece(to, capturedPiece)
+		} else {
+			if b.Turn == WHITE {
+				b.capturePiece(to+8, b.Squares[to+8])
+				b.Squares[to+8] = EMPTY
+			} else {
+				b.capturePiece(to-8, b.Squares[to-8])
+				b.Squares[to-8] = EMPTY
+			}
+		}
 	}
 }
 
@@ -293,8 +400,8 @@ func (b *Board) capturePiece(sq Square, captured Piece) {
 		return
 	}
 	sqBB := Bitboard(0x1 << sq)
-	kind := captured.kind()
-	switch captured.color() {
+	kind := captured.Kind()
+	switch captured.Color() {
 	case WHITE:
 		b.Whites[kind] &= ^sqBB
 		b.WhitePieces &= ^sqBB
@@ -302,51 +409,4 @@ func (b *Board) capturePiece(sq Square, captured Piece) {
 		b.Blacks[kind] &= ^sqBB
 		b.BlackPieces &= ^sqBB
 	}
-}
-
-//Undo capture piece
-func (b *Board) uncapturePiece(sq Square, captured Piece) {
-	if captured == EMPTY {
-		return
-	}
-	sqBB := Bitboard(0x1 << sq)
-	kind := captured.kind()
-	switch captured.color() {
-	case WHITE:
-		b.Whites[kind] |= sqBB
-		b.WhitePieces |= sqBB
-	case BLACK:
-		b.Blacks[kind] |= sqBB
-		b.BlackPieces |= sqBB
-	}
-}
-
-// Generates legal moves and update board's check, checkmate, stalement and castling status
-func (b *Board) UpdateStatusOnMove(m Move) {
-	kind := b.Squares[m.to()].kind()
-	if kind == KING {
-		if b.Turn == WHITE {
-			b.Castling &= ^(CASTLE_WKS & CASTLE_WQS)
-		} else {
-			b.Castling &= ^(CASTLE_BKS & CASTLE_BQS)
-		}
-	}
-	if kind == ROOK {
-		switch m.from() {
-		case WKS_ROOK_SQUARE:
-			b.Castling &= ^CASTLE_WKS
-		case WQS_ROOK_SQUARE:
-			b.Castling &= ^CASTLE_WQS
-		case BKS_ROOK_SQUARE:
-			b.Castling &= ^CASTLE_BKS
-		case BQS_ROOK_SQUARE:
-			b.Castling &= ^CASTLE_BQS
-		}
-	}
-
-	b.GenerateLegalMoves()
-
-	b.IsCheck = b.ComputeIsCheck()
-	b.IsCheckmate = b.IsCheck && !b.hasMoves()
-	b.IsStalement = !b.IsCheck && !b.hasMoves()
 }

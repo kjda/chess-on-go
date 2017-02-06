@@ -10,14 +10,16 @@ const (
 
 //castling squares
 const (
-	WKS_KING_SQUARE = 62 // G1
-	WQS_KING_SQUARE = 58 // C1
-	BKS_KING_SQUARE = 6  // G8
-	BQS_KING_SQUARE = 2  // B8
-	WKS_ROOK_SQUARE = 56 // A1
-	WQS_ROOK_SQUARE = 63 // H1
-	BKS_ROOK_SQUARE = 7  // H8
-	BQS_ROOK_SQUARE = 0  //A8
+	W_KING_INIT_SQUARE       = 60 // e1
+	B_KING_INIT_SQUARE       = 4  // e8
+	WKS_KING_TO_SQUARE       = 62 // g1
+	WQS_KING_TO_SQUARE       = 58 // c1
+	BKS_KING_TO_SQUARE       = 6  // g8
+	BQS_KING_TO_SQUARE       = 2  // c8
+	WKS_ROOK_ORIGINAL_SQUARE = 63 // h1
+	WQS_ROOK_ORIGINAL_SQUARE = 56 // a1
+	BKS_ROOK_ORIGINAL_SQUARE = 7  // h8
+	BQS_ROOK_ORIGINAL_SQUARE = 0  // a8
 )
 
 type Board struct {
@@ -101,8 +103,8 @@ func (b *Board) addPiece(piece Piece, index int) {
 		return
 	}
 	bit := Bitboard(0x1 << uint(index))
-	kind := piece.kind()
-	switch piece.color() {
+	kind := piece.Kind()
+	switch piece.Color() {
 	case WHITE:
 		b.Whites[kind] |= bit
 		b.WhitePieces |= bit

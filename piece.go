@@ -39,19 +39,19 @@ type Color uint8
 
 type Piece uint8
 
-func (p Piece) kind() Piece {
+func (p Piece) Kind() Piece {
 	return Piece(p & (0x7))
 }
 
-func (p Piece) isWhite() bool {
+func (p Piece) IsWhite() bool {
 	return p&WHITE_MASK > 0
 }
 
-func (p Piece) isBlack() bool {
+func (p Piece) IsBlack() bool {
 	return p&BLACK_MASK > 0
 }
 
-func (p Piece) color() Color {
+func (p Piece) Color() Color {
 	if p&WHITE_MASK > 0 {
 		return WHITE
 	}
@@ -61,10 +61,21 @@ func (p Piece) color() Color {
 	return NO_COLOR
 }
 
-func (p Piece) toRune() rune {
+func (p Piece) ToRune() rune {
 	r, ok := PIECE_TO_RUNE[p]
 	if !ok {
 		return ' '
 	}
 	return r
+}
+
+func (p Piece) ToString() string {
+	r, ok := PIECE_TO_RUNE[p]
+	if !ok {
+		return ""
+	}
+	if p.IsWhite() {
+		return "w" + string(r)
+	}
+	return "b" + string(r)
 }

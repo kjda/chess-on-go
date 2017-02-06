@@ -28,15 +28,11 @@ func (b *Board) PrintBoard(title string) {
 		if i%8 == 0 {
 			fmt.Println("")
 		}
-		if v.toRune() == ' ' {
+		if v.ToRune() == ' ' {
 			fmt.Printf("   %c%d:-   ", file(Square(i)), rank(Square(i)))
 		} else {
-			fmt.Printf("   %c%d:%c   ", file(Square(i)), rank(Square(i)), v.toRune())
+			fmt.Printf("   %c%d:%c   ", file(Square(i)), rank(Square(i)), v.ToRune())
 		}
 	}
 	fmt.Printf("\n_______________________________________\n")
-}
-
-func log(msg string) {
-	fmt.Println(msg)
 }

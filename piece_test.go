@@ -51,19 +51,19 @@ func Test_PieceApi(t *testing.T) {
 		{B_PAWN, BLACK, PAWN, false, 'p'},
 	}
 	for _, record := range testData {
-		if record.piece.color() != record.color {
+		if record.piece.Color() != record.color {
 			t.Error("Piece color not working")
 		}
-		if record.piece.kind() != record.kind {
+		if record.piece.Kind() != record.kind {
 			t.Error("Piece kind not working")
 		}
-		if record.piece.isWhite() != record.isWhite {
+		if record.piece.IsWhite() != record.isWhite {
 			t.Error("Piece isWhite not working")
 		}
-		if record.piece.isBlack() == record.isWhite {
+		if record.piece.IsBlack() == record.isWhite {
 			t.Error("Piece isBlack not working")
 		}
-		if record.piece.toRune() != record.r {
+		if record.piece.ToRune() != record.r {
 			t.Error("Piece toRune not working")
 		}
 	}

@@ -19,7 +19,7 @@ const (
 * EnPassant        bit  12
 * Castling         bit  13
 * Promotion        bits 14 - 16
-* CapturedPiece    bits 17 - 20
+* CapturedPieceKind    bits 17 - 20
  */
 type Move uint32
 
@@ -68,6 +68,10 @@ func (m Move) isPromotionMove() bool {
 
 func (m Move) toString() string {
 	return fmt.Sprintf("%s %s", SQUARE_TO_COORDS[m.from()], SQUARE_TO_COORDS[m.to()])
+}
+
+func (m Move) ToFromToStrings() (string, string) {
+	return SQUARE_TO_COORDS[m.from()], SQUARE_TO_COORDS[m.to()]
 }
 
 func (m Move) getPromotionTo() Piece {
