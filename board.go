@@ -27,20 +27,22 @@ type Board struct {
 	WhitePieces Bitboard
 	BlackPieces Bitboard
 	// _, pawns, knights, bishops, rooks, queens, king
-	Whites      [7]Bitboard
-	Blacks      [7]Bitboard
-	Occupied    Bitboard
-	Squares     [64]Piece
-	EnPassant   Square
-	Castling    int
-	HalfMoves   int
-	FullMoves   int
-	Turn        Color
-	PseudoMoves []Move
-	LegalMoves  []Move
-	IsCheck     bool
-	IsCheckmate bool
-	IsStalement bool
+	Whites         [7]Bitboard
+	Blacks         [7]Bitboard
+	Occupied       Bitboard
+	Squares        [64]Piece
+	EnPassant      Square
+	Castling       int
+	HalfMoves      int
+	FullMoves      int
+	Turn           Color
+	PseudoMoves    []Move
+	LegalMoves     []Move
+	IsCheck        bool
+	IsCheckmate    bool
+	IsStalement    bool
+	IsMaterialDraw bool
+	IsFinished     bool
 }
 
 func (b *Board) Reset() {
@@ -63,6 +65,8 @@ func (b *Board) Reset() {
 	b.IsCheck = false
 	b.IsCheckmate = false
 	b.IsStalement = false
+	b.IsMaterialDraw = false
+	b.IsFinished = false
 }
 
 func NewBoard() *Board {
@@ -73,23 +77,25 @@ func NewBoard() *Board {
 
 func CloneBoard(b *Board) Board {
 	clone := Board{
-		Fen:         b.Fen,
-		WhitePieces: b.WhitePieces,
-		BlackPieces: b.BlackPieces,
-		Whites:      [7]Bitboard{},
-		Blacks:      [7]Bitboard{},
-		Squares:     [64]Piece{},
-		Occupied:    b.Occupied,
-		EnPassant:   b.EnPassant,
-		Castling:    b.Castling,
-		HalfMoves:   b.HalfMoves,
-		FullMoves:   b.FullMoves,
-		Turn:        b.Turn,
-		PseudoMoves: []Move{},
-		LegalMoves:  []Move{},
-		IsCheck:     b.IsCheck,
-		IsCheckmate: b.IsCheckmate,
-		IsStalement: b.IsStalement,
+		Fen:            b.Fen,
+		WhitePieces:    b.WhitePieces,
+		BlackPieces:    b.BlackPieces,
+		Whites:         [7]Bitboard{},
+		Blacks:         [7]Bitboard{},
+		Squares:        [64]Piece{},
+		Occupied:       b.Occupied,
+		EnPassant:      b.EnPassant,
+		Castling:       b.Castling,
+		HalfMoves:      b.HalfMoves,
+		FullMoves:      b.FullMoves,
+		Turn:           b.Turn,
+		PseudoMoves:    []Move{},
+		LegalMoves:     []Move{},
+		IsCheck:        b.IsCheck,
+		IsCheckmate:    b.IsCheckmate,
+		IsStalement:    b.IsStalement,
+		IsMaterialDraw: b.IsMaterialDraw,
+		IsFinished:     b.IsFinished,
 	}
 	copy(clone.Whites[:], b.Whites[:])
 	copy(clone.Blacks[:], b.Blacks[:])
@@ -133,4 +139,12 @@ func (b *Board) GetColors() (Color, Color) {
 
 func (b *Board) hasMoves() bool {
 	return len(b.LegalMoves) > 0
+}
+
+func (b *Board) ShouldIncFullMoves(m Move) bool {
+	return b.Squares[m.From()].Color() == BLACK
+}
+
+func (b *Board) ShouldResetPly(m Move) bool {
+	return m.GetCapturedPiece() > 0 || b.Squares[m.From()].Kind() == PAWN
 }

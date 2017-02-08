@@ -102,3 +102,13 @@ func (bb *Bitboard) popLSB() uint {
 	*bb -= lsb
 	return lsb.lsbIndex()
 }
+
+func (b *Bitboard) NumberOfSetBits() int {
+	count := 0
+	c := Bitboard(*b)
+	for c > 0 {
+		count = count + 1
+		c.popLSB()
+	}
+	return count
+}

@@ -1,6 +1,6 @@
 package chessongo
 
-import "fmt"
+import "strings"
 
 var genMovesCalls uint = 0
 
@@ -163,7 +163,7 @@ func (b *Board) genPawnAttacks() {
 		for targets > 0 {
 			to := Square(targets.popLSB())
 			from := Square(int(to) + fromShift)
-			if from.rank() == to.rank() {
+			if from.Rank() == to.Rank() {
 				continue
 			}
 			if b.EnPassant > 0 && to == b.EnPassant {
@@ -260,14 +260,14 @@ func (b *Board) isCheckedFromRay(target, attackers Bitboard, directions []Direct
 
 //Checks whether the given move is possible or not
 func (b *Board) CanMove(m Move) bool {
-	if m.isCastlingMove() {
+	if m.IsCastlingMove() {
 		var inBetweenSq Square
-		if m.to() == WKS_KING_TO_SQUARE || m.to() == BQS_KING_TO_SQUARE {
-			inBetweenSq = m.from() + 1
-		} else if m.to() == WQS_KING_TO_SQUARE || m.to() == BQS_KING_TO_SQUARE {
-			inBetweenSq = m.from() - 1
+		if m.To() == WKS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
+			inBetweenSq = m.From() + 1
+		} else if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
+			inBetweenSq = m.From() - 1
 		}
-		inBetweenMove := NewMove(m.from(), inBetweenSq, EMPTY)
+		inBetweenMove := NewMove(m.From(), inBetweenSq, EMPTY)
 		if b.IsCheck || b.WillMoveCauseCheck(inBetweenMove) {
 			return false
 		}
@@ -284,7 +284,7 @@ func (b *Board) WillMoveCauseCheck(m Move) bool {
 //
 func (b *Board) MakeMove(m Move) {
 	b.justMove(m)
-	kind := b.Squares[m.to()].Kind()
+	kind := b.Squares[m.To()].Kind()
 	if kind == KING {
 		if b.Turn == WHITE {
 			b.Castling &= ^(CASTLE_WKS | CASTLE_WQS)
@@ -293,7 +293,7 @@ func (b *Board) MakeMove(m Move) {
 		}
 	}
 	if kind == ROOK {
-		switch m.from() {
+		switch m.From() {
 		case WKS_ROOK_ORIGINAL_SQUARE:
 			b.Castling &= ^CASTLE_WKS
 		case WQS_ROOK_ORIGINAL_SQUARE:
@@ -305,30 +305,26 @@ func (b *Board) MakeMove(m Move) {
 		}
 	}
 
-	switch m.to() {
+	switch m.To() {
 	case WKS_ROOK_ORIGINAL_SQUARE:
-		fmt.Println("ROOK TO WKS_ROOK_ORIGINAL_SQUARE")
 		b.Castling &= ^CASTLE_WKS
 	case WQS_ROOK_ORIGINAL_SQUARE:
-		fmt.Println("ROOK TO WQS_ROOK_ORIGINAL_SQUARE")
 		b.Castling &= ^CASTLE_WQS
 	case BKS_ROOK_ORIGINAL_SQUARE:
-		fmt.Println("ROOK TO BKS_ROOK_ORIGINAL_SQUARE")
 		b.Castling &= ^CASTLE_BKS
 	case BQS_ROOK_ORIGINAL_SQUARE:
-		fmt.Println("ROOK TO BQS_ROOK_ORIGINAL_SQUARE")
 		b.Castling &= ^CASTLE_BQS
 	}
 	// enPassant target
 	b.EnPassant = 0
 	if kind == PAWN && b.Turn == WHITE {
-		if m.from().rank() == 6 && m.to().rank() == 4 {
-			b.EnPassant = m.from() - 8
+		if m.From().Rank() == 6 && m.To().Rank() == 4 {
+			b.EnPassant = m.From() - 8
 		}
 	}
 	if kind == PAWN && b.Turn == BLACK {
-		if m.from().rank() == 1 && m.to().rank() == 3 {
-			b.EnPassant = m.from() + 8
+		if m.From().Rank() == 1 && m.To().Rank() == 3 {
+			b.EnPassant = m.From() + 8
 		}
 	}
 
@@ -343,44 +339,51 @@ func (b *Board) MakeMove(m Move) {
 	b.IsCheck = b.ComputeIsCheck()
 	b.IsCheckmate = b.IsCheck && !b.hasMoves()
 	b.IsStalement = !b.IsCheckmate && !b.hasMoves()
+	b.IsMaterialDraw = b.hasInsufficientMaterial()
+	b.IsFinished = (b.IsCheckmate || b.IsStalement || b.IsMaterialDraw)
 }
 
 //
 func (b *Board) justMove(m Move) {
-	from := m.from()
-	to := m.to()
+	from := m.From()
+	to := m.To()
+
 	//capturedPiece := m.captured()
 	capturedPiece := b.Squares[to]
-	if m.isEnPassant() && b.Turn == WHITE {
+	if m.IsEnPassant() && b.Turn == WHITE {
 		capturedPiece = b.Squares[to+8]
-	} else if m.isEnPassant() && b.Turn == BLACK {
+	} else if m.IsEnPassant() && b.Turn == BLACK {
 		capturedPiece = b.Squares[to-8]
 	}
-	notFromBB := ^Bitboard(0x1 << from)
+	fromBBNeg := ^Bitboard(0x1 << from)
 	toBB := Bitboard(0x1 << to)
 
 	movingPiece := b.Squares[from]
 	movingPieceKind := movingPiece.Kind()
 	switch movingPiece.Color() {
 	case WHITE:
-		b.Whites[movingPieceKind] &= notFromBB
+		// update bitmap of moving piece kind, unset bit of source square
+		b.Whites[movingPieceKind] &= fromBBNeg
+		// update bitmap of moving piece kind, set bit of source square
 		b.Whites[movingPieceKind] |= toBB
-		b.WhitePieces &= notFromBB
+		// update white pieces bitboard - unset old square
+		b.WhitePieces &= fromBBNeg
+		// update white pieces bitboard - set new square
 		b.WhitePieces |= toBB
 	case BLACK:
-		b.Blacks[movingPieceKind] &= notFromBB
+		b.Blacks[movingPieceKind] &= fromBBNeg
 		b.Blacks[movingPieceKind] |= toBB
-		b.BlackPieces &= notFromBB
+		b.BlackPieces &= fromBBNeg
 		b.BlackPieces |= toBB
 	}
 
-	b.Occupied &= notFromBB
+	b.Occupied &= fromBBNeg
 	b.Occupied |= toBB
 
-	b.Squares[m.to()] = b.Squares[m.from()]
-	b.Squares[m.from()] = EMPTY
+	b.Squares[m.To()] = b.Squares[m.From()]
+	b.Squares[m.From()] = EMPTY
 	if capturedPiece != EMPTY {
-		if !m.isEnPassant() {
+		if !m.IsEnPassant() {
 			b.capturePiece(to, capturedPiece)
 		} else {
 			if b.Turn == WHITE {
@@ -391,6 +394,16 @@ func (b *Board) justMove(m Move) {
 				b.Squares[to-8] = EMPTY
 			}
 		}
+	}
+	if m.IsCastlingMove() {
+		var rookMove Move
+		if m.To() == WKS_KING_TO_SQUARE || m.To() == BKS_KING_TO_SQUARE {
+			rookMove = NewMove(m.To()+1, m.To()-1, 0)
+		} else if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
+			rookMove = NewMove(m.To()-2, m.To()+1, 0)
+		}
+
+		b.justMove(rookMove)
 	}
 }
 
@@ -409,4 +422,121 @@ func (b *Board) capturePiece(sq Square, captured Piece) {
 		b.Blacks[kind] &= ^sqBB
 		b.BlackPieces &= ^sqBB
 	}
+}
+
+func (b *Board) hasInsufficientMaterial() bool {
+	if b.Whites[QUEEN] > 0 || b.Whites[ROOK] > 0 || b.Whites[PAWN] > 0 {
+		return false
+	}
+	if b.Blacks[QUEEN] > 0 || b.Blacks[ROOK] > 0 || b.Blacks[PAWN] > 0 {
+		return false
+	}
+	if b.Whites[KNIGHT] > 0 && b.Whites[BISHOP] > 0 {
+		return false
+	}
+	if b.Blacks[KNIGHT] > 0 && b.Blacks[BISHOP] > 0 {
+		return false
+	}
+
+	if b.Whites[BISHOP].NumberOfSetBits() > 1 {
+		return false
+	}
+
+	if b.Blacks[BISHOP].NumberOfSetBits() > 1 {
+		return false
+	}
+
+	if b.Whites[KNIGHT].NumberOfSetBits() > 1 {
+		return false
+	}
+
+	if b.Blacks[KNIGHT].NumberOfSetBits() > 1 {
+		return false
+	}
+
+	return true
+}
+
+/*
+	1. moving piece letter(exclude pawn)
+		1.1 originating file letter of the moving piece
+		1.2 OR: the originating rank digit of the moving piece
+		1.3 OR: originating square
+	2. if capturing pawn -> include originating file
+	3. x for caputures
+	4. destination square
+	5. PawnPromotion -> "="  followed by promoted piece rune in uppercase
+*/
+func (b *Board) GetMoveSan(m Move) string {
+	pgn := ""
+	from := m.From()
+	to := m.To()
+
+	if m.IsCastlingMove() {
+		if m.To() == WKS_KING_TO_SQUARE || m.To() == BKS_KING_TO_SQUARE {
+			pgn += "O-O"
+		}
+		if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
+			pgn += "O-O-O"
+		}
+	} else {
+		movingKind := b.Squares[from].Kind()
+		if movingKind != PAWN { // -------> 1.
+			pgn += strings.ToUpper(string(b.Squares[from].ToRune()))
+		}
+
+		// Disambiguation:
+		othersOfSameKind, onSameFileCount, onSameRankCount := b.GetOthersOfSameKindMovingToSameTargetCounts(m)
+		if othersOfSameKind > 0 {
+			if onSameFileCount == 0 {
+				pgn += m.From().FileLetter() // -------> 1.1
+			} else if onSameRankCount == 0 {
+				pgn += m.From().FileLetter() // -------> 1.2
+			} else {
+				pgn += m.From().Coords() // -------> 1.2
+			}
+		}
+
+		isCapturing := m.GetCapturedPiece() != EMPTY
+		if isCapturing && movingKind == PAWN {
+			pgn += from.FileLetter() // -------> 2.
+		}
+		if isCapturing {
+			pgn += "x" // -------> 3.
+		}
+
+		pgn += to.Coords() // -------> 4.
+
+		if m.IsPromotionMove() {
+			pgn += "=" + strings.ToUpper(string(m.GetPromotionTo().ToRune())) // -------> 5.
+		}
+	}
+
+	clone := CloneBoard(b)
+	clone.MakeMove(m)
+	if clone.IsCheckmate {
+		pgn += "#"
+	} else if clone.IsCheck {
+		pgn += "+"
+	}
+
+	return pgn
+}
+
+func (b *Board) GetOthersOfSameKindMovingToSameTargetCounts(themove Move) (otherOfSameKind int, onSameFileCount int, onSameRankCount int) {
+	movingPiece := b.Squares[themove.From()]
+	to := themove.To()
+	for _, m := range b.LegalMoves {
+		if m == themove || m.To() != to || b.Squares[m.From()].Kind() != movingPiece.Kind() {
+			continue
+		}
+		otherOfSameKind += 1
+		if m.From().File() == to.File() {
+			onSameFileCount += 1
+		}
+		if m.From().Rank() == to.Rank() {
+			onSameRankCount += 1
+		}
+	}
+	return
 }

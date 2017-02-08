@@ -3,13 +3,21 @@ package chessongo
 type Square uint8
 
 //get rank from square
-func (s Square) rank() int {
+func (s Square) Rank() int {
 	return int(s / 8)
 }
 
 //get file from square
-func (s Square) file() int {
+func (s Square) File() int {
 	return int(s % 8)
+}
+
+func (s Square) FileLetter() string {
+	return string(SQUARE_TO_COORDS[s][0])
+}
+
+func (s Square) Coords() string {
+	return SQUARE_TO_COORDS[s]
 }
 
 var SQUARE_TO_COORDS = [64]string{
@@ -23,7 +31,7 @@ var SQUARE_TO_COORDS = [64]string{
 	"a1", "b1", "c1", "d1", "e1", "f1", "g1", "h1",
 }
 
-var COORS_TO_SQUARE = map[string]Square{
+var COORDS_TO_SQUARE = map[string]Square{
 	"a8": Square(0), "b8": Square(1), "c8": Square(2), "d8": Square(3), "e8": Square(4), "f8": Square(5), "g8": Square(6), "h8": Square(7),
 	"a7": Square(8), "b7": Square(9), "c7": Square(10), "d7": Square(11), "e7": Square(12), "f7": Square(13), "g7": Square(14), "h7": Square(15),
 	"a6": Square(16), "b6": Square(17), "c6": Square(18), "d6": Square(19), "e6": Square(20), "f6": Square(21), "g6": Square(22), "h6": Square(23),

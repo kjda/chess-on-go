@@ -46,38 +46,38 @@ func NewCastlingMove(from, to Square) Move {
 	return m
 }
 
-func (m Move) from() Square {
+func (m Move) From() Square {
 	return Square(m & MOVE_TO_FROM_MASK)
 }
 
-func (m Move) to() Square {
+func (m Move) To() Square {
 	return Square((m >> MOVE_TO_BIT) & MOVE_TO_FROM_MASK)
 }
 
-func (m Move) captured() Piece {
-	return Piece((m >> MOVE_CAPTURE_BIT) & MOVE_CAPTURED_MASK)
+func (m Move) IsCastlingMove() bool {
+	return (uint32(m)>>MOVE_CASTLING_BIT)&0x1 > 0
 }
 
-func (m Move) isEnPassant() bool {
+func (m Move) IsEnPassant() bool {
 	return (uint32(m)>>MOVE_ENPASSANT_BIT)&0x1 > 0
 }
 
-func (m Move) isPromotionMove() bool {
+func (m Move) IsPromotionMove() bool {
 	return (uint32(m)>>MOVE_PROMOTION_BIT)&MOVE_PROMOTION_MASK > 0
 }
 
-func (m Move) toString() string {
-	return fmt.Sprintf("%s %s", SQUARE_TO_COORDS[m.from()], SQUARE_TO_COORDS[m.to()])
+func (m Move) GetCapturedPiece() Piece {
+	return Piece((m >> MOVE_CAPTURE_BIT) & MOVE_CAPTURED_MASK)
 }
 
-func (m Move) ToFromToStrings() (string, string) {
-	return SQUARE_TO_COORDS[m.from()], SQUARE_TO_COORDS[m.to()]
-}
-
-func (m Move) getPromotionTo() Piece {
+func (m Move) GetPromotionTo() Piece {
 	return Piece((m >> MOVE_PROMOTION_BIT) & MOVE_PROMOTION_MASK)
 }
 
-func (m Move) isCastlingMove() bool {
-	return (uint32(m)>>MOVE_CASTLING_BIT)&0x1 > 0
+func (m Move) ToString() string {
+	return fmt.Sprintf("%s %s", SQUARE_TO_COORDS[m.From()], SQUARE_TO_COORDS[m.To()])
+}
+
+func (m Move) ToFromToStrings() (string, string) {
+	return SQUARE_TO_COORDS[m.From()], SQUARE_TO_COORDS[m.To()]
 }

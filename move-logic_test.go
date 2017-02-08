@@ -40,7 +40,7 @@ func Test_GenerateLegalMoves(t *testing.T) {
 		b.InitFromFen(fen)
 		b.GenerateLegalMoves()
 		//for _, move := range b.LegalMoves {
-		//	fmt.Printf("%s \n", move.toString())
+		//	fmt.Printf("%s \n", move.ToString())
 		//}
 		//fmt.Printf("\n\n")
 		movesCount := len(b.LegalMoves)
@@ -102,14 +102,14 @@ func Test_GenerateKing(t *testing.T) {
 		b.InitFromFen(fen)
 		b.GenerateLegalMoves()
 		//for _, move := range b.LegalMoves {
-		//	fmt.Printf("%s \n", move.toString())
+		//	fmt.Printf("%s \n", move.ToString())
 		//}
 		//fmt.Printf("\n\n")
 		assert.Equal(t, len(expectedMoves), len(b.LegalMoves))
 		for _, expectedMove := range expectedMoves {
 			found := false
 			for _, move := range b.LegalMoves {
-				if move.toString() == expectedMove {
+				if move.ToString() == expectedMove {
 					found = true
 				}
 			}

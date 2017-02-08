@@ -32,9 +32,9 @@ var FILES = map[int]rune{
 }
 
 func file(sq Square) rune {
-	return FILES[sq.file()]
+	return FILES[sq.File()]
 }
 
 func rank(sq Square) int {
-	return 8 - sq.rank()
+	return 8 - sq.Rank()
 }

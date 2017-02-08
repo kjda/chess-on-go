@@ -66,7 +66,7 @@ func initKingKnightAttacksFrom(attacksFrom []Bitboard, shifts [8][2]int) {
 	for squareIdx := 0; squareIdx < 64; squareIdx++ {
 		square = Square(squareIdx)
 		attacksFrom[squareIdx] = Bitboard(0)
-		rank, file = square.rank(), square.file()
+		rank, file = square.Rank(), square.File()
 		for _, shift := range shifts {
 			bitRank, bitFile = (rank + shift[0]), (file + shift[1])
 			if IsCoordsOutofBoard(bitRank, bitFile) {
@@ -152,7 +152,7 @@ func initAttacksTo() {
 	var square Square
 	for i := 0; i < 64; i++ {
 		square = Square(i)
-		rank, file = square.rank(), square.file()
+		rank, file = square.Rank(), square.File()
 		for _, shift := range KING_RANK_FILE_SHIFTS {
 			bitRank, bitFile = (rank + shift[0]), (file + shift[1])
 			if IsCoordsOutofBoard(bitRank, bitFile) {
@@ -163,7 +163,7 @@ func initAttacksTo() {
 	}
 	for i := 0; i < 64; i++ {
 		square = Square(i)
-		rank, file = square.rank(), square.file()
+		rank, file = square.Rank(), square.File()
 		for _, shift := range KNIGHT_RANK_FILE_SHIFTS {
 			bitRank, bitFile = (rank + shift[0]), (file + shift[1])
 			if IsCoordsOutofBoard(bitRank, bitFile) {
