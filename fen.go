@@ -2,6 +2,7 @@ package chessongo
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -18,6 +19,11 @@ var RUNE_TO_PIECE = map[rune]Piece{
 var PIECE_TO_RUNE = map[Piece]rune{
 	W_PAWN: 'P', W_KNIGHT: 'N', W_BISHOP: 'B', W_ROOK: 'R', W_QUEEN: 'Q', W_KING: 'K',
 	B_PAWN: 'p', B_KNIGHT: 'n', B_BISHOP: 'b', B_ROOK: 'r', B_QUEEN: 'q', B_KING: 'k',
+}
+
+var STRING_TO_KIND = map[string]uint{
+	"P": PAWN, "N": KNIGHT, "B": BISHOP, "R": ROOK, "Q": QUEEN, "K": KING,
+	"p": PAWN, "n": KNIGHT, "b": BISHOP, "r": ROOK, "q": QUEEN, "k": KING,
 }
 
 var RUNE_TO_FILE = map[rune]int{'a': 0, 'b': 1, 'c': 2, 'd': 3, 'e': 4, 'f': 5, 'g': 6, 'h': 7}
@@ -89,6 +95,7 @@ func (b *Board) InitFromFen(fen string) error {
 		enPassant = strings.ToLower(enPassant)
 		file := RUNE_TO_FILE[rune(enPassant[0])]
 		rank := RUNE_TO_RANK[rune(enPassant[1])]
+		log.Println("SETTING EP TO")
 		b.EnPassant = CoordsToSquare(rank, file)
 	} else {
 		b.EnPassant = 0

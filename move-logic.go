@@ -151,7 +151,10 @@ func (b *Board) genPawnTwoSteps() {
 func (b *Board) genPawnAttacks() {
 	ours, _ := b.GetPawns()
 	var targets Bitboard
-	enPassant := Bitboard(0x1 << uint(b.EnPassant))
+	enPassant := Bitboard(0)
+	if b.EnPassant > 0 {
+		enPassant = Bitboard(0x1 << uint(b.EnPassant))
+	}
 	for _, shift := range [2]int{7, 9} {
 		fromShift := shift
 		if b.Turn == WHITE {
@@ -163,9 +166,6 @@ func (b *Board) genPawnAttacks() {
 		for targets > 0 {
 			to := Square(targets.popLSB())
 			from := Square(int(to) + fromShift)
-			if from.Rank() == to.Rank() {
-				continue
-			}
 			if b.EnPassant > 0 && to == b.EnPassant {
 				var capturedSq Square
 				if b.Turn == WHITE {
@@ -357,7 +357,6 @@ func (b *Board) justMove(m Move) {
 	}
 	fromBBNeg := ^Bitboard(0x1 << from)
 	toBB := Bitboard(0x1 << to)
-
 	movingPiece := b.Squares[from]
 	movingPieceKind := movingPiece.Kind()
 	switch movingPiece.Color() {
@@ -402,8 +401,25 @@ func (b *Board) justMove(m Move) {
 		} else if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
 			rookMove = NewMove(m.To()-2, m.To()+1, 0)
 		}
-
 		b.justMove(rookMove)
+	}
+	var promoteTo Piece = m.GetPromotionTo()
+	if promoteTo > 0 {
+		switch b.Squares[to].Color() {
+		case WHITE:
+			// remove advanced pawn from boards
+			b.Whites[PAWN] &= ^toBB
+			// add promotePiece to board
+			b.Whites[promoteTo] |= toBB
+			b.WhitePieces |= toBB
+		case BLACK:
+			// remove advanced pawn from boards
+			b.Blacks[PAWN] &= ^toBB
+			// add promotePiece to board
+			b.Blacks[promoteTo] |= toBB
+			b.BlackPieces |= toBB
+		}
+		b.Squares[m.To()] = Piece(uint(promoteTo) | uint(b.Turn))
 	}
 }
 
@@ -508,7 +524,7 @@ func (b *Board) GetMoveSan(m Move) string {
 		pgn += to.Coords() // -------> 4.
 
 		if m.IsPromotionMove() {
-			pgn += "=" + strings.ToUpper(string(m.GetPromotionTo().ToRune())) // -------> 5.
+			pgn += "=" + strings.ToUpper(string(m.GetPromotionTo())) // -------> 5.
 		}
 	}
 

@@ -66,6 +66,11 @@ func (m Move) IsPromotionMove() bool {
 	return (uint32(m)>>MOVE_PROMOTION_BIT)&MOVE_PROMOTION_MASK > 0
 }
 
+func (m Move) IsPromotingTo(promotingTo string) bool {
+	promotingToPiece, ok := STRING_TO_KIND[promotingTo]
+	return ok && Piece(promotingToPiece) == m.GetPromotionTo()
+}
+
 func (m Move) GetCapturedPiece() Piece {
 	return Piece((m >> MOVE_CAPTURE_BIT) & MOVE_CAPTURED_MASK)
 }

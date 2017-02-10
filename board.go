@@ -72,6 +72,7 @@ func (b *Board) Reset() {
 func NewBoard() *Board {
 	b := Board{}
 	b.InitFromFen(STARTING_POSITION_FEN)
+	//b.InitFromFen("8/PPPPPPPP/8/8/8/8/8 w - - 0 1")
 	return &b
 }
 
