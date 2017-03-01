@@ -114,15 +114,15 @@ func (b *Board) genPawnOneStep() {
 		shift = -8
 	}
 	for targets > 0 {
-		to := targets.popLSB()
-		from := int(to) + shift
-		if (b.Turn == WHITE && (Bitboard(0x1<<to)&RANK8_MASK > 0)) || (b.Turn == BLACK && (Bitboard(0x1<<to)&RANK1_MASK > 0)) {
-			b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(Square(from), Square(to), b.Squares[to], QUEEN))
-			b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(Square(from), Square(to), b.Squares[to], ROOK))
-			b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(Square(from), Square(to), b.Squares[to], KNIGHT))
-			b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(Square(from), Square(to), b.Squares[to], BISHOP))
+		to := Square(targets.popLSB())
+		from := Square(int(to) + shift)
+		if b.IsToPromotionRank(to) {
+			b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], QUEEN))
+			b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], ROOK))
+			b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], KNIGHT))
+			b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], BISHOP))
 		} else {
-			b.PseudoMoves = append(b.PseudoMoves, NewMove(Square(from), Square(to), b.Squares[to]))
+			b.PseudoMoves = append(b.PseudoMoves, NewMove(from, to, b.Squares[to]))
 		}
 	}
 }
@@ -174,11 +174,20 @@ func (b *Board) genPawnAttacks() {
 					capturedSq = to - 8
 				}
 				b.PseudoMoves = append(b.PseudoMoves, NewEnPassantMove(from, to, b.Squares[capturedSq]))
+			} else if b.IsToPromotionRank(to) {
+				b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], QUEEN))
+				b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], ROOK))
+				b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], KNIGHT))
+				b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], BISHOP))
 			} else {
 				b.PseudoMoves = append(b.PseudoMoves, NewMove(from, to, b.Squares[to]))
 			}
 		}
 	}
+}
+
+func (b *Board) IsToPromotionRank(to Square) bool {
+	return (b.Turn == WHITE && (Bitboard(0x1<<to)&RANK8_MASK > 0)) || (b.Turn == BLACK && (Bitboard(0x1<<to)&RANK1_MASK > 0))
 }
 
 //Checks whether our king is in check or not
