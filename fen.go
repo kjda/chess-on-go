@@ -2,9 +2,7 @@ package chessongo
 
 import (
 	"fmt"
-	"log"
 	"strconv"
-	"strings"
 )
 
 const STARTING_POSITION_FEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
@@ -34,76 +32,195 @@ var FILE_TO_STRING = map[int]string{0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "
 
 var RANK_TO_STRING = map[int]string{0: "8", 1: "7", 2: "6", 3: "5", 4: "4", 5: "3", 6: "2", 7: "1"}
 
-//initialize board from Fen string
-func (b *Board) InitFromFen(fen string) error {
+// initialize board from FEN string
+func (b *Board) LoadFen(fen string) error {
 	b.Reset()
 	b.Fen = fen
-	fen = strings.Trim(fen, " ")
-	parts := strings.Split(fen, " ")
-	if len(parts) != 6 {
+	i := 0
+	for i < len(fen) && fen[i] == ' ' {
+		i++
+	}
+	if i >= len(fen) {
 		return fmt.Errorf(E_INVALID_FEN)
 	}
-	pieces := parts[0]
-	turn := parts[1]
-	castling := parts[2]
-	enPassant := parts[3]
-	halfMoves := parts[4]
-	fullMoves := parts[5]
 
-	index := 0
-	for _, r := range pieces {
-		if index > 63 {
+	// Pieces
+	idx := 0
+	for ; i < len(fen) && fen[i] != ' '; i++ {
+		c := fen[i]
+		switch c {
+		case '/':
+			continue
+		case '1', '2', '3', '4', '5', '6', '7', '8':
+			empty := int(c - '0')
+			for j := 0; j < empty; j++ {
+				if idx > 63 {
+					return fmt.Errorf(E_INVALID_FEN)
+				}
+				b.addPiece(EMPTY, idx)
+				idx++
+			}
+		case 'p':
+			b.addPiece(B_PAWN, idx)
+			idx++
+		case 'n':
+			b.addPiece(B_KNIGHT, idx)
+			idx++
+		case 'b':
+			b.addPiece(B_BISHOP, idx)
+			idx++
+		case 'r':
+			b.addPiece(B_ROOK, idx)
+			idx++
+		case 'q':
+			b.addPiece(B_QUEEN, idx)
+			idx++
+		case 'k':
+			b.addPiece(B_KING, idx)
+			idx++
+		case 'P':
+			b.addPiece(W_PAWN, idx)
+			idx++
+		case 'N':
+			b.addPiece(W_KNIGHT, idx)
+			idx++
+		case 'B':
+			b.addPiece(W_BISHOP, idx)
+			idx++
+		case 'R':
+			b.addPiece(W_ROOK, idx)
+			idx++
+		case 'Q':
+			b.addPiece(W_QUEEN, idx)
+			idx++
+		case 'K':
+			b.addPiece(W_KING, idx)
+			idx++
+		default:
 			return fmt.Errorf(E_INVALID_FEN)
 		}
-		switch r {
-		case 'p', 'n', 'b', 'r', 'q', 'k', 'P', 'N', 'B', 'R', 'Q', 'K':
-			b.addPiece(RUNE_TO_PIECE[r], index)
-			index++
-		case '1', '2', '3', '4', '5', '6', '7', '8':
-			emptySquares, _ := strconv.Atoi(string(r))
-			for i := 0; i < emptySquares; i++ {
-				b.addPiece(EMPTY, index)
-				index++
+	}
+	if idx != 64 {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	if i >= len(fen) || fen[i] != ' ' {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	i++
+
+	// Turn
+	if i >= len(fen) {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	if fen[i] == 'w' {
+		b.Turn = WHITE
+	} else if fen[i] == 'b' {
+		b.Turn = BLACK
+	} else {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	i++
+	if i >= len(fen) || fen[i] != ' ' {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	i++
+
+	// Castling
+	b.Castling = 0
+	if i < len(fen) && fen[i] == '-' {
+		i++
+	} else {
+		for ; i < len(fen) && fen[i] != ' '; i++ {
+			switch fen[i] {
+			case 'K':
+				b.Castling |= CASTLE_WKS
+			case 'Q':
+				b.Castling |= CASTLE_WQS
+			case 'k':
+				b.Castling |= CASTLE_BKS
+			case 'q':
+				b.Castling |= CASTLE_BQS
+			default:
+				return fmt.Errorf(E_INVALID_FEN)
 			}
 		}
 	}
-
-	if turn == "w" {
-		b.Turn = WHITE
-	} else {
-		b.Turn = BLACK
+	if i >= len(fen) || fen[i] != ' ' {
+		return fmt.Errorf(E_INVALID_FEN)
 	}
+	i++
 
-	b.Castling = 0
-	for _, r := range castling {
-		switch r {
-		case 'K':
-			b.Castling |= CASTLE_WKS
-		case 'Q':
-			b.Castling |= CASTLE_WQS
-		case 'k':
-			b.Castling |= CASTLE_BKS
-		case 'q':
-			b.Castling |= CASTLE_BQS
+	// En passant
+	if i >= len(fen) {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	if fen[i] == '-' {
+		b.EnPassant = 0
+		i++
+	} else {
+		if i+1 >= len(fen) {
+			return fmt.Errorf(E_INVALID_FEN)
+		}
+		fileChar, rankChar := fen[i], fen[i+1]
+		if fileChar < 'a' || fileChar > 'h' || rankChar < '1' || rankChar > '8' {
+			return fmt.Errorf(E_INVALID_FEN)
+		}
+		file := int(fileChar - 'a')
+		rank := 8 - int(rankChar-'0')
+		b.EnPassant = CoordsToSquare(rank, file)
+		i += 2
+	}
+	if i >= len(fen) || fen[i] != ' ' {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	i++
+
+	// Half-move clock
+	halfMoves := 0
+	for ; i < len(fen) && fen[i] != ' '; i++ {
+		d := fen[i]
+		if d < '0' || d > '9' {
+			return fmt.Errorf(E_INVALID_FEN)
+		}
+		halfMoves = halfMoves*10 + int(d-'0')
+	}
+	if i >= len(fen) {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	if fen[i] != ' ' {
+		return fmt.Errorf(E_INVALID_FEN)
+	}
+	i++
+	b.HalfMoves = halfMoves
+
+	// Full-move number
+	fullMoves := 0
+	for ; i < len(fen) && fen[i] != ' '; i++ {
+		d := fen[i]
+		if d < '0' || d > '9' {
+			return fmt.Errorf(E_INVALID_FEN)
+		}
+		fullMoves = fullMoves*10 + int(d-'0')
+	}
+	if i < len(fen) {
+		// trailing non-space content means invalid
+		for ; i < len(fen); i++ {
+			if fen[i] != ' ' {
+				return fmt.Errorf(E_INVALID_FEN)
+			}
 		}
 	}
+	b.FullMoves = fullMoves
 
-	b.HalfMoves, _ = strconv.Atoi(string(halfMoves))
-	b.FullMoves, _ = strconv.Atoi(string(fullMoves))
-
-	if enPassant != "-" {
-		enPassant = strings.ToLower(enPassant)
-		file := RUNE_TO_FILE[rune(enPassant[0])]
-		rank := RUNE_TO_RANK[rune(enPassant[1])]
-		log.Println("SETTING EP TO")
-		b.EnPassant = CoordsToSquare(rank, file)
-	} else {
-		b.EnPassant = 0
+	if b.PositionHistory == nil {
+		b.PositionHistory = map[uint64]int{}
 	}
+	b.recordPosition()
+
 	return nil
 }
 
-//return FEN representation of board
+// return FEN representation of board
 func (b *Board) ToFen() string {
 	var pieces, turn, castling, enPassant string
 

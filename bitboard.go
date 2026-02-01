@@ -1,5 +1,7 @@
 package chessongo
 
+import "math/bits"
+
 /*************************************************
 *	Bitboard representation
 *
@@ -20,10 +22,10 @@ package chessongo
 
 ***************************************************/
 
-//"Most significant bit" index lookup table
+// "Most significant bit" index lookup table
 var MS1BTABLE = [256]int{}
 
-//"Least significant bit" index lookup table
+// "Least significant bit" index lookup table
 var LS1BTABLE = [64]uint{
 	0, 1, 48, 2, 57, 49, 28, 3,
 	61, 58, 50, 42, 38, 29, 17, 4,
@@ -35,12 +37,12 @@ var LS1BTABLE = [64]uint{
 	25, 14, 19, 9, 13, 8, 7, 6,
 }
 
-//initilize bitboards
+// initilize bitboards
 func init() {
 	initMostSignificatBit()
 }
 
-//Initialze most significant bit lookup table
+// Initialze most significant bit lookup table
 func initMostSignificatBit() {
 	for i := 0; i < 256; i++ {
 		if i > 127 {
@@ -65,50 +67,38 @@ func initMostSignificatBit() {
 	}
 }
 
-//Bitboard
+// Bitboard
 type Bitboard uint64
 
-//Get least significant bit
+// Get least significant bit
 func (bb Bitboard) lsb() Bitboard {
 	return bb & (-bb)
 }
 
-//Get index of least significant(of Martin Läuter)
+// Get index of least significant(of Martin Läuter)
 func (bb Bitboard) lsbIndex() uint {
 	return LS1BTABLE[(bb.lsb()*0x03f79d71b4cb0a89)>>58]
 }
 
-//Get index of most significant bit(of Eugene Nalimov)
+// Get index of most significant bit(of Eugene Nalimov)
 func (bb Bitboard) msbIndex() int {
-	var msb int = 0
-	if bb > 0xFFFFFFFF {
-		bb >>= 32
-		msb = 32
+	if bb == 0 {
+		return -1
 	}
-	if bb > 0xFFFF {
-		bb >>= 16
-		msb += 16
-	}
-	if bb > 0xFF {
-		bb >>= 8
-		msb += 8
-	}
-	return msb + MS1BTABLE[bb]
+	return 63 - bits.LeadingZeros64(uint64(bb))
 }
 
-//Pop least significant bit and return it's index
+// Pop least significant bit and return it's index
 func (bb *Bitboard) popLSB() uint {
 	lsb := (*bb).lsb()
 	*bb -= lsb
 	return lsb.lsbIndex()
 }
 
-func (b *Bitboard) NumberOfSetBits() int {
+func (b Bitboard) NumberOfSetBits() int {
 	count := 0
-	c := Bitboard(*b)
-	for c > 0 {
-		count = count + 1
-		c.popLSB()
+	for c := b; c > 0; c.popLSB() {
+		count++
 	}
 	return count
 }

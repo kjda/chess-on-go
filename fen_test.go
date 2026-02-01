@@ -2,9 +2,11 @@ package chessongo
 
 import (
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func Test_InitFromFen(t *testing.T) {
+func Test_LoadFen(t *testing.T) {
 	b := NewBoard()
 	fens := []string{
 		"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
@@ -16,17 +18,15 @@ func Test_InitFromFen(t *testing.T) {
 		"rnb1kbnr/ppp2ppp/8/8/2qp4/5N2/PPP2PPP/RNBQK2R w KQkq - 0 6",
 	}
 	for _, fen := range fens {
-		b.InitFromFen(fen)
-		if b.ToFen() != fen {
-			t.Error("initFromFen not working")
-		}
+		b.LoadFen(fen)
+		require.Equal(t, fen, b.ToFen())
 	}
 
 }
 
 func Test_ToFen(t *testing.T) {
 	b := NewBoard()
-	if b.ToFen() != STARTING_POSITION_FEN {
-		t.Error("Invalid starting position")
-	}
+	require.Equal(t, STARTING_POSITION_FEN, b.ToFen())
+	b.LoadFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
+	require.Equal(t, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", b.ToFen())
 }

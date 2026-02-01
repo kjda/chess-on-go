@@ -4,7 +4,7 @@ import "strings"
 
 var genMovesCalls uint = 0
 
-//Generate all peseudo moves
+// Generate all peseudo moves
 func (b *Board) GeneratePseudoMoves() {
 	var ours [7]Bitboard
 	var oursAll Bitboard
@@ -15,7 +15,8 @@ func (b *Board) GeneratePseudoMoves() {
 		ours = b.Blacks
 		oursAll = b.BlackPieces
 	}
-	b.PseudoMoves = []Move{}
+	// Reuse underlying array capacity if available
+	b.PseudoMoves = b.PseudoMoves[:0]
 	b.genPawnOneStep()
 	b.genPawnTwoSteps()
 	b.genPawnAttacks()
@@ -26,10 +27,12 @@ func (b *Board) GeneratePseudoMoves() {
 	b.genCastling()
 }
 
-//Generate all legal moves
+// Generate all legal moves
 func (b *Board) GenerateLegalMoves() {
+	// Ensure current check status is known before validating castling legality.
+	b.IsCheck = b.ComputeIsCheck()
 	b.GeneratePseudoMoves()
-	b.LegalMoves = []Move{}
+	b.LegalMoves = b.LegalMoves[:0]
 	for _, move := range b.PseudoMoves {
 		if b.CanMove(move) {
 			b.LegalMoves = append(b.LegalMoves, move)
@@ -37,7 +40,7 @@ func (b *Board) GenerateLegalMoves() {
 	}
 }
 
-//Generates King & Knight pseudo-legal moves
+// Generates King & Knight pseudo-legal moves
 func (b *Board) genFromMoves(pieces, ours Bitboard, attackFrom []Bitboard) {
 	for pieces > 0 {
 		from := pieces.popLSB()
@@ -50,7 +53,7 @@ func (b *Board) genFromMoves(pieces, ours Bitboard, attackFrom []Bitboard) {
 
 }
 
-//Generate sliding-piece's pseudo-legal moves
+// Generate sliding-piece's pseudo-legal moves
 func (b *Board) genRayMoves(pieces, ours Bitboard, directions []Direction) {
 	for pieces > 0 {
 		from := pieces.popLSB()
@@ -74,7 +77,7 @@ func (b *Board) genRayMoves(pieces, ours Bitboard, directions []Direction) {
 	}
 }
 
-//Generate castling pseudo-legal moves
+// Generate castling pseudo-legal moves
 func (b *Board) genCastling() {
 	if b.Turn == WHITE && (b.Castling&CASTLE_WKS) > 0 && (b.Occupied&(0x3<<61)) == 0 {
 		from := Square(b.Whites[KING].lsbIndex())
@@ -103,7 +106,7 @@ func (b *Board) genCastling() {
 	return
 }
 
-//Generate Pawn-one-step-forward pseudo-legal moves
+// Generate Pawn-one-step-forward pseudo-legal moves
 func (b *Board) genPawnOneStep() {
 	var targets Bitboard
 	var shift int = 8
@@ -127,17 +130,17 @@ func (b *Board) genPawnOneStep() {
 	}
 }
 
-//Generate Pawn-two-step-forward pseudo-legal moves
+// Generate Pawn-two-step-forward pseudo-legal moves
 func (b *Board) genPawnTwoSteps() {
 	var targets Bitboard
 	var shift int
 	if b.Turn == WHITE {
-		rank3filtered := ((b.Whites[PAWN] & RANK2_MASK) >> 8) &^ b.Occupied
-		targets = ((rank3filtered & RANK3_MASK) >> 8) &^ b.Occupied
+		rank3filtered := ((b.Whites[PAWN] & Bitboard(RANK2_MASK)) >> 8) &^ b.Occupied
+		targets = ((rank3filtered & Bitboard(RANK3_MASK)) >> 8) &^ b.Occupied
 		shift = 16
 	} else {
-		rank6filtered := ((b.Blacks[PAWN] & RANK7_MASK) << 8) &^ b.Occupied
-		targets = ((rank6filtered & RANK6_MASK) << 8) &^ b.Occupied
+		rank6filtered := ((b.Blacks[PAWN] & Bitboard(RANK7_MASK)) << 8) &^ b.Occupied
+		targets = ((rank6filtered & Bitboard(RANK6_MASK)) << 8) &^ b.Occupied
 		shift = -16
 	}
 	for targets > 0 {
@@ -147,7 +150,7 @@ func (b *Board) genPawnTwoSteps() {
 	}
 }
 
-//Generate pawns left and right attacks
+// Generate pawns left and right attacks
 func (b *Board) genPawnAttacks() {
 	ours, _ := b.GetPawns()
 	var targets Bitboard
@@ -156,24 +159,36 @@ func (b *Board) genPawnAttacks() {
 		enPassant = Bitboard(0x1 << uint(b.EnPassant))
 	}
 	for _, shift := range [2]int{7, 9} {
-		fromShift := shift
 		if b.Turn == WHITE {
-			targets = Bitboard(ours>>uint(shift)) & (b.BlackPieces | enPassant)
+			if shift == 7 {
+				targets = (ours & ^Bitboard(FILE_H_MASK)) >> uint(shift)
+			} else {
+				targets = (ours & ^Bitboard(FILE_A_MASK)) >> uint(shift)
+			}
+			targets &= (b.BlackPieces | enPassant)
 		} else {
-			targets = Bitboard(ours<<uint(shift)) & (b.WhitePieces | enPassant)
-			fromShift *= -1
+			if shift == 7 {
+				targets = (ours & ^Bitboard(FILE_A_MASK)) << uint(shift)
+			} else {
+				targets = (ours & ^Bitboard(FILE_H_MASK)) << uint(shift)
+			}
+			targets &= (b.WhitePieces | enPassant)
 		}
 		for targets > 0 {
 			to := Square(targets.popLSB())
+			fromShift := shift
+			if b.Turn == BLACK {
+				fromShift *= -1
+			}
 			from := Square(int(to) + fromShift)
 			if b.EnPassant > 0 && to == b.EnPassant {
-				var capturedSq Square
+				var capturedPiece Piece
 				if b.Turn == WHITE {
-					capturedSq = to + 8
+					capturedPiece = b.Squares[to+8]
 				} else {
-					capturedSq = to - 8
+					capturedPiece = b.Squares[to-8]
 				}
-				b.PseudoMoves = append(b.PseudoMoves, NewEnPassantMove(from, to, b.Squares[capturedSq]))
+				b.PseudoMoves = append(b.PseudoMoves, NewEnPassantMove(from, to, capturedPiece))
 			} else if b.IsToPromotionRank(to) {
 				b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], QUEEN))
 				b.PseudoMoves = append(b.PseudoMoves, NewPromotionMove(from, to, b.Squares[to], ROOK))
@@ -187,13 +202,13 @@ func (b *Board) genPawnAttacks() {
 }
 
 func (b *Board) IsToPromotionRank(to Square) bool {
-	return (b.Turn == WHITE && (Bitboard(0x1<<to)&RANK8_MASK > 0)) || (b.Turn == BLACK && (Bitboard(0x1<<to)&RANK1_MASK > 0))
+	return (b.Turn == WHITE && (Bitboard(0x1<<uint(to))&Bitboard(RANK8_MASK) > 0)) || (b.Turn == BLACK && (Bitboard(0x1<<uint(to))&Bitboard(RANK1_MASK) > 0))
 }
 
-//Checks whether our king is in check or not
+// Checks whether our king is in check or not
 func (b *Board) ComputeIsCheck() bool {
 	genMovesCalls++
-	var kingBB, theirsAll, attackers, targets Bitboard
+	var kingBB, theirsAll, attackers Bitboard
 	var theirs []Bitboard
 	if b.Turn == WHITE {
 		kingBB, theirs, theirsAll = b.Whites[KING], b.Blacks[:], b.BlackPieces
@@ -221,16 +236,18 @@ func (b *Board) ComputeIsCheck() bool {
 		}
 	}
 
-	enPassant := Bitboard(0x1 << uint(b.EnPassant))
 	if b.Turn == WHITE {
-		targets = Bitboard(b.Blacks[PAWN]<<uint(7)) & (b.WhitePieces | enPassant)
-		targets |= Bitboard(b.Blacks[PAWN]<<uint(9)) & (b.WhitePieces | enPassant)
+		// Black pawns attack “down” the board (towards higher square indices).
+		if ((b.Blacks[PAWN]&^Bitboard(FILE_A_MASK))<<7)&kingBB > 0 ||
+			((b.Blacks[PAWN]&^Bitboard(FILE_H_MASK))<<9)&kingBB > 0 {
+			return true
+		}
 	} else {
-		targets = Bitboard(b.Whites[PAWN]>>uint(7)) & (b.BlackPieces | enPassant)
-		targets |= Bitboard(b.Whites[PAWN]>>uint(9)) & (b.BlackPieces | enPassant)
-	}
-	if targets&kingBB > 0 {
-		return true
+		// White pawns attack “up” the board (towards lower square indices).
+		if ((b.Whites[PAWN]&^Bitboard(FILE_H_MASK))>>7)&kingBB > 0 ||
+			((b.Whites[PAWN]&^Bitboard(FILE_A_MASK))>>9)&kingBB > 0 {
+			return true
+		}
 	}
 
 	attackers = theirs[KING] & possibleAttackers
@@ -243,7 +260,7 @@ func (b *Board) ComputeIsCheck() bool {
 	return false
 }
 
-//checks whether target is attacked by one of the "attackers"
+// checks whether target is attacked by one of the "attackers"
 func (b *Board) isCheckedFromRay(target, attackers Bitboard, directions []Direction) bool {
 	var targets Bitboard
 	var from uint
@@ -267,11 +284,11 @@ func (b *Board) isCheckedFromRay(target, attackers Bitboard, directions []Direct
 	return false
 }
 
-//Checks whether the given move is possible or not
+// Checks whether the given move is possible or not
 func (b *Board) CanMove(m Move) bool {
 	if m.IsCastlingMove() {
 		var inBetweenSq Square
-		if m.To() == WKS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
+		if m.To() == WKS_KING_TO_SQUARE || m.To() == BKS_KING_TO_SQUARE {
 			inBetweenSq = m.From() + 1
 		} else if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
 			inBetweenSq = m.From() - 1
@@ -290,8 +307,16 @@ func (b *Board) WillMoveCauseCheck(m Move) bool {
 	return clone.ComputeIsCheck() == true
 }
 
-//
 func (b *Board) MakeMove(m Move) {
+	if b.ShouldResetPly(m) {
+		b.HalfMoves = 0
+	} else {
+		b.HalfMoves++
+	}
+	if b.ShouldIncFullMoves(m) {
+		b.FullMoves++
+	}
+
 	b.justMove(m)
 	kind := b.Squares[m.To()].Kind()
 	if kind == KING {
@@ -343,16 +368,20 @@ func (b *Board) MakeMove(m Move) {
 		b.Turn = WHITE
 	}
 
+	b.recordPosition()
+
 	b.GenerateLegalMoves()
 
 	b.IsCheck = b.ComputeIsCheck()
 	b.IsCheckmate = b.IsCheck && !b.hasMoves()
 	b.IsStalement = !b.IsCheckmate && !b.hasMoves()
 	b.IsMaterialDraw = b.hasInsufficientMaterial()
-	b.IsFinished = (b.IsCheckmate || b.IsStalement || b.IsMaterialDraw)
+	b.IsThreefoldRepetition = b.checkThreefoldRepetition()
+	b.IsFiftyMoveRule = b.checkFiftyMoveRule()
+	b.IsSeventyFiveMoveRule = b.checkSeventyFiveMoveRule()
+	b.IsFinished = (b.IsCheckmate || b.IsStalement || b.IsMaterialDraw || b.IsFivefoldRepetition() || b.IsSeventyFiveMoveRule)
 }
 
-//
 func (b *Board) justMove(m Move) {
 	from := m.From()
 	to := m.To()
@@ -395,10 +424,14 @@ func (b *Board) justMove(m Move) {
 			b.capturePiece(to, capturedPiece)
 		} else {
 			if b.Turn == WHITE {
-				b.capturePiece(to+8, b.Squares[to+8])
+				capSq := to + 8
+				b.capturePiece(capSq, b.Squares[capSq])
+				b.Occupied &= ^Bitboard(0x1 << capSq)
 				b.Squares[to+8] = EMPTY
 			} else {
-				b.capturePiece(to-8, b.Squares[to-8])
+				capSq := to - 8
+				b.capturePiece(capSq, b.Squares[capSq])
+				b.Occupied &= ^Bitboard(0x1 << capSq)
 				b.Squares[to-8] = EMPTY
 			}
 		}
@@ -432,7 +465,7 @@ func (b *Board) justMove(m Move) {
 	}
 }
 
-//Remove captured piece from opponent's pieces
+// Remove captured piece from opponent's pieces
 func (b *Board) capturePiece(sq Square, captured Piece) {
 	if captured == EMPTY {
 		return
@@ -483,59 +516,17 @@ func (b *Board) hasInsufficientMaterial() bool {
 }
 
 /*
-	1. moving piece letter(exclude pawn)
-		1.1 originating file letter of the moving piece
-		1.2 OR: the originating rank digit of the moving piece
-		1.3 OR: originating square
-	2. if capturing pawn -> include originating file
-	3. x for caputures
-	4. destination square
-	5. PawnPromotion -> "="  followed by promoted piece rune in uppercase
+ 1. moving piece letter(exclude pawn)
+    1.1 originating file letter of the moving piece
+    1.2 OR: the originating rank digit of the moving piece
+    1.3 OR: originating square
+ 2. if capturing pawn -> include originating file
+ 3. x for caputures
+ 4. destination square
+ 5. PawnPromotion -> "="  followed by promoted piece rune in uppercase
 */
 func (b *Board) GetMoveSan(m Move) string {
-	pgn := ""
-	from := m.From()
-	to := m.To()
-
-	if m.IsCastlingMove() {
-		if m.To() == WKS_KING_TO_SQUARE || m.To() == BKS_KING_TO_SQUARE {
-			pgn += "O-O"
-		}
-		if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
-			pgn += "O-O-O"
-		}
-	} else {
-		movingKind := b.Squares[from].Kind()
-		if movingKind != PAWN { // -------> 1.
-			pgn += strings.ToUpper(string(b.Squares[from].ToRune()))
-		}
-
-		// Disambiguation:
-		othersOfSameKind, onSameFileCount, onSameRankCount := b.GetOthersOfSameKindMovingToSameTargetCounts(m)
-		if othersOfSameKind > 0 {
-			if onSameFileCount == 0 {
-				pgn += m.From().FileLetter() // -------> 1.1
-			} else if onSameRankCount == 0 {
-				pgn += m.From().FileLetter() // -------> 1.2
-			} else {
-				pgn += m.From().Coords() // -------> 1.2
-			}
-		}
-
-		isCapturing := m.GetCapturedPiece() != EMPTY
-		if isCapturing && movingKind == PAWN {
-			pgn += from.FileLetter() // -------> 2.
-		}
-		if isCapturing {
-			pgn += "x" // -------> 3.
-		}
-
-		pgn += to.Coords() // -------> 4.
-
-		if m.IsPromotionMove() {
-			pgn += "=" + strings.ToUpper(string(m.GetPromotionTo())) // -------> 5.
-		}
-	}
+	pgn := b.GetMoveSanWithoutSuffix(m)
 
 	clone := CloneBoard(b)
 	clone.MakeMove(m)
@@ -546,6 +537,56 @@ func (b *Board) GetMoveSan(m Move) string {
 	}
 
 	return pgn
+}
+
+// GetMoveSanWithoutSuffix returns the SAN notation for a move without checking for check (+) or checkmate (#).
+// This prevents expensive board cloning and is sufficient for PGN parsing matching.
+func (b *Board) GetMoveSanWithoutSuffix(m Move) string {
+	var sb strings.Builder
+	from := m.From()
+	to := m.To()
+
+	if m.IsCastlingMove() {
+		if m.To() == WKS_KING_TO_SQUARE || m.To() == BKS_KING_TO_SQUARE {
+			sb.WriteString("O-O")
+		}
+		if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
+			sb.WriteString("O-O-O")
+		}
+	} else {
+		movingKind := b.Squares[from].Kind()
+		if movingKind != PAWN { // -------> 1.
+			sb.WriteString(strings.ToUpper(string(b.Squares[from].ToRune())))
+		}
+
+		// Disambiguation:
+		othersOfSameKind, onSameFileCount, onSameRankCount := b.GetOthersOfSameKindMovingToSameTargetCounts(m)
+		if othersOfSameKind > 0 {
+			if onSameFileCount == 0 {
+				sb.WriteString(m.From().FileLetter()) // -------> 1.1
+			} else if onSameRankCount == 0 {
+				sb.WriteString(m.From().FileLetter()) // -------> 1.2
+			} else {
+				sb.WriteString(m.From().Coords()) // -------> 1.2
+			}
+		}
+
+		isCapturing := m.GetCapturedPiece() != EMPTY
+		if isCapturing && movingKind == PAWN {
+			sb.WriteString(from.FileLetter()) // -------> 2.
+		}
+		if isCapturing {
+			sb.WriteString("x") // -------> 3.
+		}
+
+		sb.WriteString(to.Coords()) // -------> 4.
+
+		if m.IsPromotionMove() {
+			sb.WriteString("=")
+			sb.WriteString(strings.ToUpper(string(m.GetPromotionTo()))) // -------> 5.
+		}
+	}
+	return sb.String()
 }
 
 func (b *Board) GetOthersOfSameKindMovingToSameTargetCounts(themove Move) (otherOfSameKind int, onSameFileCount int, onSameRankCount int) {
