@@ -11,7 +11,7 @@ func Benchmark_GenerateLegalMoves(b *testing.B) {
 
 	b.RunParallel(func(pb *testing.PB) {
 		board := NewBoard()
-		board.InitFromFen("r3k2r/pppbqppp/2n2n2/1B1pp3/1b1PP3/P1N1BN2/1PP1QPPP/R3K2R b KQkq - 0 8")
+		board.LoadFen("r3k2r/pppbqppp/2n2n2/1B1pp3/1b1PP3/P1N1BN2/1PP1QPPP/R3K2R b KQkq - 0 8")
 		for pb.Next() {
 			board.GenerateLegalMoves()
 		}
@@ -37,7 +37,7 @@ func Test_GenerateLegalMoves(t *testing.T) {
 	}
 	for fen, expectedCount := range positions {
 		b := NewBoard()
-		b.InitFromFen(fen)
+		b.LoadFen(fen)
 		b.GenerateLegalMoves()
 		//for _, move := range b.LegalMoves {
 		//	fmt.Printf("%s \n", move.ToString())
@@ -99,7 +99,7 @@ func Test_GenerateKing(t *testing.T) {
 	for fen, expectedMoves := range positions {
 		b := NewBoard()
 		//fmt.Println(fen)
-		b.InitFromFen(fen)
+		b.LoadFen(fen)
 		b.GenerateLegalMoves()
 		//for _, move := range b.LegalMoves {
 		//	fmt.Printf("%s \n", move.ToString())

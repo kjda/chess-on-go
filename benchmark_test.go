@@ -16,7 +16,7 @@ func BenchmarkInitializeBoardFromFEN(b *testing.B) {
 		b.Run(fen, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				board := &Board{}
-				if err := board.InitFromFen(fen); err != nil {
+				if err := board.LoadFen(fen); err != nil {
 					b.Fatalf("init fen: %v", err)
 				}
 			}
@@ -36,7 +36,7 @@ func BenchmarkGenerateLegalMoves(b *testing.B) {
 		fen := fen
 		b.Run(fen, func(b *testing.B) {
 			board := &Board{}
-			if err := board.InitFromFen(fen); err != nil {
+			if err := board.LoadFen(fen); err != nil {
 				b.Fatalf("init fen: %v", err)
 			}
 			b.ResetTimer()
@@ -77,7 +77,7 @@ func BenchmarkPerft(b *testing.B) {
 func benchmarkPerft(b *testing.B, fen string, depth int) {
 	// Warm up once to set bytes and validate the position.
 	board := &Board{}
-	if err := board.InitFromFen(fen); err != nil {
+	if err := board.LoadFen(fen); err != nil {
 		b.Fatalf("init fen: %v", err)
 	}
 	board.GenerateLegalMoves()
@@ -89,7 +89,7 @@ func benchmarkPerft(b *testing.B, fen string, depth int) {
 	for i := 0; i < b.N; i++ {
 		b.StopTimer()
 		board = &Board{}
-		if err := board.InitFromFen(fen); err != nil {
+		if err := board.LoadFen(fen); err != nil {
 			b.Fatalf("init fen: %v", err)
 		}
 		board.GenerateLegalMoves()

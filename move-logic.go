@@ -307,6 +307,15 @@ func (b *Board) WillMoveCauseCheck(m Move) bool {
 }
 
 func (b *Board) MakeMove(m Move) {
+	if b.ShouldResetPly(m) {
+		b.HalfMoves = 0
+	} else {
+		b.HalfMoves++
+	}
+	if b.ShouldIncFullMoves(m) {
+		b.FullMoves++
+	}
+
 	b.justMove(m)
 	kind := b.Squares[m.To()].Kind()
 	if kind == KING {
@@ -357,6 +366,8 @@ func (b *Board) MakeMove(m Move) {
 	} else {
 		b.Turn = WHITE
 	}
+
+	b.recordPosition()
 
 	b.GenerateLegalMoves()
 

@@ -32,8 +32,8 @@ var FILE_TO_STRING = map[int]string{0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "
 
 var RANK_TO_STRING = map[int]string{0: "8", 1: "7", 2: "6", 3: "5", 4: "4", 5: "3", 6: "2", 7: "1"}
 
-// initialize board from Fen string
-func (b *Board) InitFromFen(fen string) error {
+// initialize board from FEN string
+func (b *Board) LoadFen(fen string) error {
 	b.Reset()
 	b.Fen = fen
 	i := 0
@@ -211,6 +211,11 @@ func (b *Board) InitFromFen(fen string) error {
 		}
 	}
 	b.FullMoves = fullMoves
+
+	if b.PositionHistory == nil {
+		b.PositionHistory = map[uint64]int{}
+	}
+	b.recordPosition()
 
 	return nil
 }
