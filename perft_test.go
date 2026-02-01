@@ -1,5 +1,11 @@
 package chessongo
 
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
 func perft(b *Board, depth int) uint64 {
 	if depth == 0 {
 		return 1
@@ -12,14 +18,14 @@ func perft(b *Board, depth int) uint64 {
 	copy(moves, b.LegalMoves)
 
 	for _, m := range moves {
-		nb := CloneBoard(b)
-		nb.MakeMove(m)
-		nodes += perft(&nb, depth-1)
+		b.MakeMove(m)
+		nodes += perft(b, depth-1)
+		b.UndoMove(m)
 	}
 	return nodes
 }
 
-/*
+// *
 func TestPerftInitialPosition(t *testing.T) {
 	b := &Board{}
 	err := b.LoadFen(STARTING_POSITION_FEN)

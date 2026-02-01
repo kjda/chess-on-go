@@ -558,13 +558,13 @@ func (b *Board) hasInsufficientMaterial() bool {
 func (b *Board) GetMoveSan(m Move) string {
 	pgn := b.GetMoveSanWithoutSuffix(m)
 
-	clone := CloneBoard(b)
-	clone.MakeMove(m)
-	if clone.IsCheckmate {
+	b.MakeMove(m)
+	if b.IsCheckmate {
 		pgn += "#"
-	} else if clone.IsCheck {
+	} else if b.IsCheck {
 		pgn += "+"
 	}
+	b.UndoMove(m)
 
 	return pgn
 }
