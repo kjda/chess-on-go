@@ -50,18 +50,20 @@ type Board struct {
 	IsStalement           bool
 	IsMaterialDraw        bool
 	IsThreefoldRepetition bool
+	IsFiftyMoveRule       bool
+	IsSeventyFiveMoveRule bool
 	IsFinished            bool
 }
 
 func (b *Board) Reset() {
 	b.Fen = ""
-	b.WhitePieces = Bitboard(0)
-	b.BlackPieces = Bitboard(0)
+	b.WhitePieces = 0
+	b.BlackPieces = 0
 	for _, kind := range [6]Piece{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING} {
-		b.Whites[kind] = Bitboard(0)
-		b.Blacks[kind] = Bitboard(0)
+		b.Whites[kind] = 0
+		b.Blacks[kind] = 0
 	}
-	b.Occupied = Bitboard(0)
+	b.Occupied = 0
 	b.Squares = [64]Piece{}
 	b.EnPassant = 0
 	b.Castling = 0
@@ -77,6 +79,8 @@ func (b *Board) Reset() {
 	b.IsStalement = false
 	b.IsMaterialDraw = false
 	b.IsThreefoldRepetition = false
+	b.IsFiftyMoveRule = false
+	b.IsSeventyFiveMoveRule = false
 	b.IsFinished = false
 }
 
@@ -263,4 +267,12 @@ func (b *Board) checkThreefoldRepetition() bool {
 
 func (b *Board) IsFivefoldRepetition() bool {
 	return b.PositionHistory != nil && b.PositionHistory[b.ZobristHash] >= 5
+}
+
+func (b *Board) checkFiftyMoveRule() bool {
+	return b.HalfMoves >= 100
+}
+
+func (b *Board) checkSeventyFiveMoveRule() bool {
+	return b.HalfMoves >= 150
 }

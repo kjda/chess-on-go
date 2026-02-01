@@ -377,7 +377,9 @@ func (b *Board) MakeMove(m Move) {
 	b.IsStalement = !b.IsCheckmate && !b.hasMoves()
 	b.IsMaterialDraw = b.hasInsufficientMaterial()
 	b.IsThreefoldRepetition = b.checkThreefoldRepetition()
-	b.IsFinished = (b.IsCheckmate || b.IsStalement || b.IsMaterialDraw || b.IsFivefoldRepetition())
+	b.IsFiftyMoveRule = b.checkFiftyMoveRule()
+	b.IsSeventyFiveMoveRule = b.checkSeventyFiveMoveRule()
+	b.IsFinished = (b.IsCheckmate || b.IsStalement || b.IsMaterialDraw || b.IsFivefoldRepetition() || b.IsSeventyFiveMoveRule)
 }
 
 func (b *Board) justMove(m Move) {

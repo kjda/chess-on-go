@@ -1,5 +1,11 @@
 package chessongo
 
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
 func perft(b *Board, depth int) uint64 {
 	if depth == 0 {
 		return 1
@@ -19,7 +25,7 @@ func perft(b *Board, depth int) uint64 {
 	return nodes
 }
 
-/*
+// *
 func TestPerftInitialPosition(t *testing.T) {
 	b := &Board{}
 	err := b.LoadFen(STARTING_POSITION_FEN)
@@ -154,4 +160,5 @@ func TestPerftPosition6(t *testing.T) {
 		require.Equalf(t, tt.expected, nodes, "Perft(pos6, %d)", tt.depth)
 	}
 }
+
 //*/
