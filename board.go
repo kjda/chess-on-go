@@ -32,24 +32,25 @@ type Board struct {
 	WhitePieces Bitboard
 	BlackPieces Bitboard
 	// _, pawns, knights, bishops, rooks, queens, king
-	Whites          [7]Bitboard
-	Blacks          [7]Bitboard
-	Occupied        Bitboard
-	Squares         [64]Piece
-	EnPassant       Square
-	Castling        int
-	HalfMoves       int
-	FullMoves       int
-	Turn            Color
-	PseudoMoves     []Move
-	LegalMoves      []Move
-	PositionHistory map[uint64]int
-	ZobristHash     uint64
-	IsCheck         bool
-	IsCheckmate     bool
-	IsStalement     bool
-	IsMaterialDraw  bool
-	IsFinished      bool
+	Whites                [7]Bitboard
+	Blacks                [7]Bitboard
+	Occupied              Bitboard
+	Squares               [64]Piece
+	EnPassant             Square
+	Castling              int
+	HalfMoves             int
+	FullMoves             int
+	Turn                  Color
+	PseudoMoves           []Move
+	LegalMoves            []Move
+	PositionHistory       map[uint64]int
+	ZobristHash           uint64
+	IsCheck               bool
+	IsCheckmate           bool
+	IsStalement           bool
+	IsMaterialDraw        bool
+	IsThreefoldRepetition bool
+	IsFinished            bool
 }
 
 func (b *Board) Reset() {
@@ -75,6 +76,7 @@ func (b *Board) Reset() {
 	b.IsCheckmate = false
 	b.IsStalement = false
 	b.IsMaterialDraw = false
+	b.IsThreefoldRepetition = false
 	b.IsFinished = false
 }
 
@@ -255,7 +257,7 @@ func (b *Board) recordPosition() {
 	b.PositionHistory[b.ZobristHash] = b.PositionHistory[b.ZobristHash] + 1
 }
 
-func (b *Board) IsThreefoldRepetition() bool {
+func (b *Board) checkThreefoldRepetition() bool {
 	return b.PositionHistory != nil && b.PositionHistory[b.ZobristHash] >= 3
 }
 

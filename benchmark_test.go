@@ -47,6 +47,30 @@ func BenchmarkGenerateLegalMoves(b *testing.B) {
 	}
 }
 
+func BenchmarkLoadPGN(b *testing.B) {
+	b.ReportAllocs()
+	shortPGN := "1. e4 e5 2. Nf3 Nc6 3. Bb5 a6 4. Ba4 Nf6 5. O-O Be7 6. Re1 b5 7. Bb3 d6 8. c3"
+
+	for i := 0; i < b.N; i++ {
+		board := &Board{}
+		if err := board.LoadPGN(shortPGN); err != nil {
+			b.Fatalf("load pgn: %v", err)
+		}
+	}
+}
+
+func BenchmarkLoadPGN_LongGame(b *testing.B) {
+	b.ReportAllocs()
+	longPGN := "1. d4 Nf6 2. c4 e6 3. Nf3 d5 4. Nc3 Be7 5. Bg5 h6 6. Bh4 O-O 7. e3 b6 8. cxd5 exd5 9. Bd3 c5 10. O-O Nc6 11. Rc1 Be6 12. Qa4 Nb4 13. Bb1 a6 14. a3 b5 15. Qd1 cxd4 16. axb4 dxc3 17. bxc3 Ne4 18. Bxe7 Qxe7 19. Nd4 Rfc8 20. Bxe4 dxe4 21. Qh5 Rc4 22. f3 exf3 23. Qxf3 Re8 24. e4 Bc8 25. Rce1 Bb7"
+
+	for i := 0; i < b.N; i++ {
+		board := &Board{}
+		if err := board.LoadPGN(longPGN); err != nil {
+			b.Fatalf("load pgn: %v", err)
+		}
+	}
+}
+
 // Benchmarks to get a quick feel for move generation speed via perft.
 func BenchmarkPerft(b *testing.B) {
 	positions := []struct {

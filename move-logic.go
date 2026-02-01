@@ -15,7 +15,8 @@ func (b *Board) GeneratePseudoMoves() {
 		ours = b.Blacks
 		oursAll = b.BlackPieces
 	}
-	b.PseudoMoves = []Move{}
+	// Reuse underlying array capacity if available
+	b.PseudoMoves = b.PseudoMoves[:0]
 	b.genPawnOneStep()
 	b.genPawnTwoSteps()
 	b.genPawnAttacks()
@@ -31,7 +32,7 @@ func (b *Board) GenerateLegalMoves() {
 	// Ensure current check status is known before validating castling legality.
 	b.IsCheck = b.ComputeIsCheck()
 	b.GeneratePseudoMoves()
-	b.LegalMoves = []Move{}
+	b.LegalMoves = b.LegalMoves[:0]
 	for _, move := range b.PseudoMoves {
 		if b.CanMove(move) {
 			b.LegalMoves = append(b.LegalMoves, move)
@@ -375,7 +376,8 @@ func (b *Board) MakeMove(m Move) {
 	b.IsCheckmate = b.IsCheck && !b.hasMoves()
 	b.IsStalement = !b.IsCheckmate && !b.hasMoves()
 	b.IsMaterialDraw = b.hasInsufficientMaterial()
-	b.IsFinished = (b.IsCheckmate || b.IsStalement || b.IsMaterialDraw)
+	b.IsThreefoldRepetition = b.checkThreefoldRepetition()
+	b.IsFinished = (b.IsCheckmate || b.IsStalement || b.IsMaterialDraw || b.IsFivefoldRepetition())
 }
 
 func (b *Board) justMove(m Move) {
@@ -522,49 +524,7 @@ func (b *Board) hasInsufficientMaterial() bool {
  5. PawnPromotion -> "="  followed by promoted piece rune in uppercase
 */
 func (b *Board) GetMoveSan(m Move) string {
-	pgn := ""
-	from := m.From()
-	to := m.To()
-
-	if m.IsCastlingMove() {
-		if m.To() == WKS_KING_TO_SQUARE || m.To() == BKS_KING_TO_SQUARE {
-			pgn += "O-O"
-		}
-		if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
-			pgn += "O-O-O"
-		}
-	} else {
-		movingKind := b.Squares[from].Kind()
-		if movingKind != PAWN { // -------> 1.
-			pgn += strings.ToUpper(string(b.Squares[from].ToRune()))
-		}
-
-		// Disambiguation:
-		othersOfSameKind, onSameFileCount, onSameRankCount := b.GetOthersOfSameKindMovingToSameTargetCounts(m)
-		if othersOfSameKind > 0 {
-			if onSameFileCount == 0 {
-				pgn += m.From().FileLetter() // -------> 1.1
-			} else if onSameRankCount == 0 {
-				pgn += m.From().FileLetter() // -------> 1.2
-			} else {
-				pgn += m.From().Coords() // -------> 1.2
-			}
-		}
-
-		isCapturing := m.GetCapturedPiece() != EMPTY
-		if isCapturing && movingKind == PAWN {
-			pgn += from.FileLetter() // -------> 2.
-		}
-		if isCapturing {
-			pgn += "x" // -------> 3.
-		}
-
-		pgn += to.Coords() // -------> 4.
-
-		if m.IsPromotionMove() {
-			pgn += "=" + strings.ToUpper(string(m.GetPromotionTo())) // -------> 5.
-		}
-	}
+	pgn := b.GetMoveSanWithoutSuffix(m)
 
 	clone := CloneBoard(b)
 	clone.MakeMove(m)
@@ -575,6 +535,56 @@ func (b *Board) GetMoveSan(m Move) string {
 	}
 
 	return pgn
+}
+
+// GetMoveSanWithoutSuffix returns the SAN notation for a move without checking for check (+) or checkmate (#).
+// This prevents expensive board cloning and is sufficient for PGN parsing matching.
+func (b *Board) GetMoveSanWithoutSuffix(m Move) string {
+	var sb strings.Builder
+	from := m.From()
+	to := m.To()
+
+	if m.IsCastlingMove() {
+		if m.To() == WKS_KING_TO_SQUARE || m.To() == BKS_KING_TO_SQUARE {
+			sb.WriteString("O-O")
+		}
+		if m.To() == WQS_KING_TO_SQUARE || m.To() == BQS_KING_TO_SQUARE {
+			sb.WriteString("O-O-O")
+		}
+	} else {
+		movingKind := b.Squares[from].Kind()
+		if movingKind != PAWN { // -------> 1.
+			sb.WriteString(strings.ToUpper(string(b.Squares[from].ToRune())))
+		}
+
+		// Disambiguation:
+		othersOfSameKind, onSameFileCount, onSameRankCount := b.GetOthersOfSameKindMovingToSameTargetCounts(m)
+		if othersOfSameKind > 0 {
+			if onSameFileCount == 0 {
+				sb.WriteString(m.From().FileLetter()) // -------> 1.1
+			} else if onSameRankCount == 0 {
+				sb.WriteString(m.From().FileLetter()) // -------> 1.2
+			} else {
+				sb.WriteString(m.From().Coords()) // -------> 1.2
+			}
+		}
+
+		isCapturing := m.GetCapturedPiece() != EMPTY
+		if isCapturing && movingKind == PAWN {
+			sb.WriteString(from.FileLetter()) // -------> 2.
+		}
+		if isCapturing {
+			sb.WriteString("x") // -------> 3.
+		}
+
+		sb.WriteString(to.Coords()) // -------> 4.
+
+		if m.IsPromotionMove() {
+			sb.WriteString("=")
+			sb.WriteString(strings.ToUpper(string(m.GetPromotionTo()))) // -------> 5.
+		}
+	}
+	return sb.String()
 }
 
 func (b *Board) GetOthersOfSameKindMovingToSameTargetCounts(themove Move) (otherOfSameKind int, onSameFileCount int, onSameRankCount int) {
