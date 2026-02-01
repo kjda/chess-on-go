@@ -27,7 +27,7 @@ const (
 	BQS_ROOK_ORIGINAL_SQUARE = 0  // a8
 )
 
-type Board struct {
+type Game struct {
 	Fen         string
 	WhitePieces Bitboard
 	BlackPieces Bitboard
@@ -53,79 +53,83 @@ type Board struct {
 	IsFiftyMoveRule       bool
 	IsSeventyFiveMoveRule bool
 	IsFinished            bool
+	History               []GameState
 }
 
-func (b *Board) Reset() {
-	b.Fen = ""
-	b.WhitePieces = 0
-	b.BlackPieces = 0
+func (g *Game) Reset() {
+	g.Fen = ""
+	g.WhitePieces = 0
+	g.BlackPieces = 0
 	for _, kind := range [6]Piece{PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING} {
-		b.Whites[kind] = 0
-		b.Blacks[kind] = 0
+		g.Whites[kind] = 0
+		g.Blacks[kind] = 0
 	}
-	b.Occupied = 0
-	b.Squares = [64]Piece{}
-	b.EnPassant = 0
-	b.Castling = 0
-	b.HalfMoves = 0
-	b.FullMoves = 0
-	b.Turn = WHITE
-	b.PseudoMoves = []Move{}
-	b.LegalMoves = []Move{}
-	b.PositionHistory = map[uint64]int{}
-	b.ZobristHash = 0
-	b.IsCheck = false
-	b.IsCheckmate = false
-	b.IsStalement = false
-	b.IsMaterialDraw = false
-	b.IsThreefoldRepetition = false
-	b.IsFiftyMoveRule = false
-	b.IsSeventyFiveMoveRule = false
-	b.IsFinished = false
+	g.Occupied = 0
+	g.Squares = [64]Piece{}
+	g.EnPassant = 0
+	g.Castling = 0
+	g.HalfMoves = 0
+	g.FullMoves = 0
+	g.Turn = WHITE
+	g.PseudoMoves = []Move{}
+	g.LegalMoves = []Move{}
+	g.PositionHistory = map[uint64]int{}
+	g.ZobristHash = 0
+	g.IsCheck = false
+	g.IsCheckmate = false
+	g.IsStalement = false
+	g.IsMaterialDraw = false
+	g.IsThreefoldRepetition = false
+	g.IsFiftyMoveRule = false
+	g.IsSeventyFiveMoveRule = false
+	g.IsFinished = false
+	g.History = []GameState{}
 }
 
-func NewBoard() *Board {
-	b := Board{}
-	b.LoadFen(STARTING_POSITION_FEN)
-	//b.LoadFen("8/PPPPPPPP/8/8/8/8/8 w - - 0 1")
-	return &b
+func NewGame() *Game {
+	g := Game{}
+	g.LoadFen(STARTING_POSITION_FEN)
+	//g.LoadFen("8/PPPPPPPP/8/8/8/8/8 w - - 0 1")
+	return &g
 }
 
-func CloneBoard(b *Board) Board {
-	clone := Board{
-		Fen:             b.Fen,
-		WhitePieces:     b.WhitePieces,
-		BlackPieces:     b.BlackPieces,
+func CloneGame(g *Game) Game {
+	clone := Game{
+		Fen:             g.Fen,
+		WhitePieces:     g.WhitePieces,
+		BlackPieces:     g.BlackPieces,
 		Whites:          [7]Bitboard{},
 		Blacks:          [7]Bitboard{},
 		Squares:         [64]Piece{},
-		Occupied:        b.Occupied,
-		EnPassant:       b.EnPassant,
-		Castling:        b.Castling,
-		HalfMoves:       b.HalfMoves,
-		FullMoves:       b.FullMoves,
-		Turn:            b.Turn,
+		Occupied:        g.Occupied,
+		EnPassant:       g.EnPassant,
+		Castling:        g.Castling,
+		HalfMoves:       g.HalfMoves,
+		FullMoves:       g.FullMoves,
+		Turn:            g.Turn,
 		PseudoMoves:     []Move{},
 		LegalMoves:      []Move{},
 		PositionHistory: map[uint64]int{},
-		ZobristHash:     b.ZobristHash,
-		IsCheck:         b.IsCheck,
-		IsCheckmate:     b.IsCheckmate,
-		IsStalement:     b.IsStalement,
-		IsMaterialDraw:  b.IsMaterialDraw,
-		IsFinished:      b.IsFinished,
+		ZobristHash:     g.ZobristHash,
+		IsCheck:         g.IsCheck,
+		IsCheckmate:     g.IsCheckmate,
+		IsStalement:     g.IsStalement,
+		IsMaterialDraw:  g.IsMaterialDraw,
+		IsFinished:      g.IsFinished,
+		History:         make([]GameState, len(g.History)),
 	}
-	copy(clone.Whites[:], b.Whites[:])
-	copy(clone.Blacks[:], b.Blacks[:])
-	copy(clone.Squares[:], b.Squares[:])
-	for k, v := range b.PositionHistory {
+	copy(clone.Whites[:], g.Whites[:])
+	copy(clone.Blacks[:], g.Blacks[:])
+	copy(clone.Squares[:], g.Squares[:])
+	copy(clone.History, g.History)
+	for k, v := range g.PositionHistory {
 		clone.PositionHistory[k] = v
 	}
 	return clone
 }
 
-func (b *Board) addPiece(piece Piece, index int) {
-	b.Squares[index] = piece
+func (g *Game) addPiece(piece Piece, index int) {
+	g.Squares[index] = piece
 	if piece == EMPTY {
 		return
 	}
@@ -133,41 +137,41 @@ func (b *Board) addPiece(piece Piece, index int) {
 	kind := piece.Kind()
 	switch piece.Color() {
 	case WHITE:
-		b.Whites[kind] |= bit
-		b.WhitePieces |= bit
+		g.Whites[kind] |= bit
+		g.WhitePieces |= bit
 	case BLACK:
-		b.Blacks[kind] |= bit
-		b.BlackPieces |= bit
+		g.Blacks[kind] |= bit
+		g.BlackPieces |= bit
 	}
-	b.Occupied |= bit
+	g.Occupied |= bit
 }
 
 // Get our pawns and opponent's
-func (b *Board) GetPawns() (Bitboard, Bitboard) {
-	if b.Turn == WHITE {
-		return b.Whites[PAWN], b.Blacks[PAWN]
+func (g *Game) GetPawns() (Bitboard, Bitboard) {
+	if g.Turn == WHITE {
+		return g.Whites[PAWN], g.Blacks[PAWN]
 	}
-	return b.Blacks[PAWN], b.Whites[PAWN]
+	return g.Blacks[PAWN], g.Whites[PAWN]
 }
 
 // Get our color and opponent's
-func (b *Board) GetColors() (Color, Color) {
-	if b.Turn == WHITE {
+func (g *Game) GetColors() (Color, Color) {
+	if g.Turn == WHITE {
 		return WHITE, BLACK
 	}
 	return BLACK, WHITE
 }
 
-func (b *Board) hasMoves() bool {
-	return len(b.LegalMoves) > 0
+func (g *Game) hasMoves() bool {
+	return len(g.LegalMoves) > 0
 }
 
-func (b *Board) ShouldIncFullMoves(m Move) bool {
-	return b.Squares[m.From()].Color() == BLACK
+func (g *Game) ShouldIncFullMoves(m Move) bool {
+	return g.Squares[m.From()].Color() == BLACK
 }
 
-func (b *Board) ShouldResetPly(m Move) bool {
-	return m.GetCapturedPiece() > 0 || b.Squares[m.From()].Kind() == PAWN
+func (g *Game) ShouldResetPly(m Move) bool {
+	return m.GetCapturedPiece() > 0 || g.Squares[m.From()].Kind() == PAWN
 }
 
 var (
@@ -229,50 +233,58 @@ func zobristPieceIndex(p Piece) int {
 	}
 }
 
-func (b *Board) computeZobrist() uint64 {
+func (g *Game) computeZobrist() uint64 {
 	ensureZobrist()
 	h := uint64(0)
-	for sq, piece := range b.Squares {
+	for sq, piece := range g.Squares {
 		idx := zobristPieceIndex(piece)
 		if idx >= 0 {
 			h ^= zobristPiece[idx][sq]
 		}
 	}
 
-	h ^= zobristCastling[b.Castling&0xF]
+	h ^= zobristCastling[g.Castling&0xF]
 
-	if b.EnPassant != 0 {
-		file := b.EnPassant.File()
+	if g.EnPassant != 0 {
+		file := g.EnPassant.File()
 		h ^= zobristEnPassant[file]
 	}
 
-	if b.Turn == BLACK {
+	if g.Turn == BLACK {
 		h ^= zobristTurnToMove
 	}
 
 	return h
 }
 
-func (b *Board) recordPosition() {
-	if b.PositionHistory == nil {
-		b.PositionHistory = map[uint64]int{}
+func (g *Game) recordPosition() {
+	if g.PositionHistory == nil {
+		g.PositionHistory = map[uint64]int{}
 	}
-	b.ZobristHash = b.computeZobrist()
-	b.PositionHistory[b.ZobristHash] = b.PositionHistory[b.ZobristHash] + 1
+	g.ZobristHash = g.computeZobrist()
+	g.PositionHistory[g.ZobristHash] = g.PositionHistory[g.ZobristHash] + 1
 }
 
-func (b *Board) checkThreefoldRepetition() bool {
-	return b.PositionHistory != nil && b.PositionHistory[b.ZobristHash] >= 3
+func (g *Game) checkThreefoldRepetition() bool {
+	return g.PositionHistory != nil && g.PositionHistory[g.ZobristHash] >= 3
 }
 
-func (b *Board) IsFivefoldRepetition() bool {
-	return b.PositionHistory != nil && b.PositionHistory[b.ZobristHash] >= 5
+func (g *Game) IsFivefoldRepetition() bool {
+	return g.PositionHistory != nil && g.PositionHistory[g.ZobristHash] >= 5
 }
 
-func (b *Board) checkFiftyMoveRule() bool {
-	return b.HalfMoves >= 100
+func (g *Game) checkFiftyMoveRule() bool {
+	return g.HalfMoves >= 100
 }
 
-func (b *Board) checkSeventyFiveMoveRule() bool {
-	return b.HalfMoves >= 150
+func (g *Game) checkSeventyFiveMoveRule() bool {
+	return g.HalfMoves >= 150
+}
+
+type GameState struct {
+	CapturedPiece Piece
+	Castling      int
+	EnPassant     Square
+	HalfMoves     int
+	ZobristHash   uint64
 }

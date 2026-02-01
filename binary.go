@@ -6,21 +6,21 @@ import (
 )
 
 // MarshalBinary encodes the board state into a byte slice.
-func (b *Board) MarshalBinary() ([]byte, error) {
+func (g *Game) MarshalBinary() ([]byte, error) {
 	// Fixed size: 64 (squares) + 1 (turn) + 1 (castling) + 1 (enpassant) + 4 (half) + 4 (full) + 4 (hist count) = 79 bytes
 	// Variable size: 9 * historyCount
-	buf := make([]byte, 79+len(b.PositionHistory)*9)
+	buf := make([]byte, 79+len(g.PositionHistory)*9)
 
-	copy(buf[0:64], fromPieces(b.Squares))
-	buf[64] = uint8(b.Turn)
-	buf[65] = uint8(b.Castling)
-	buf[66] = uint8(b.EnPassant)
-	binary.LittleEndian.PutUint32(buf[67:71], uint32(b.HalfMoves))
-	binary.LittleEndian.PutUint32(buf[71:75], uint32(b.FullMoves))
-	binary.LittleEndian.PutUint32(buf[75:79], uint32(len(b.PositionHistory)))
+	copy(buf[0:64], fromPieces(g.Squares))
+	buf[64] = uint8(g.Turn)
+	buf[65] = uint8(g.Castling)
+	buf[66] = uint8(g.EnPassant)
+	binary.LittleEndian.PutUint32(buf[67:71], uint32(g.HalfMoves))
+	binary.LittleEndian.PutUint32(buf[71:75], uint32(g.FullMoves))
+	binary.LittleEndian.PutUint32(buf[75:79], uint32(len(g.PositionHistory)))
 
 	offset := 79
-	for hash, count := range b.PositionHistory {
+	for hash, count := range g.PositionHistory {
 		binary.LittleEndian.PutUint64(buf[offset:offset+8], hash)
 		buf[offset+8] = uint8(count)
 		offset += 9
@@ -30,25 +30,25 @@ func (b *Board) MarshalBinary() ([]byte, error) {
 }
 
 // UnmarshalBinary decodes the board state from a byte slice.
-func (b *Board) UnmarshalBinary(data []byte) error {
+func (g *Game) UnmarshalBinary(data []byte) error {
 	if len(data) < 79 {
 		return errors.New("insufficient data for board")
 	}
 
-	b.Reset()
+	g.Reset()
 
 	for i := 0; i < 64; i++ {
 		piece := Piece(data[i])
 		if piece != EMPTY {
-			b.addPiece(piece, i)
+			g.addPiece(piece, i)
 		}
 	}
 
-	b.Turn = Color(data[64])
-	b.Castling = int(data[65])
-	b.EnPassant = Square(data[66])
-	b.HalfMoves = int(binary.LittleEndian.Uint32(data[67:71]))
-	b.FullMoves = int(binary.LittleEndian.Uint32(data[71:75]))
+	g.Turn = Color(data[64])
+	g.Castling = int(data[65])
+	g.EnPassant = Square(data[66])
+	g.HalfMoves = int(binary.LittleEndian.Uint32(data[67:71]))
+	g.FullMoves = int(binary.LittleEndian.Uint32(data[71:75]))
 
 	count := int(binary.LittleEndian.Uint32(data[75:79]))
 	expectedSize := 79 + count*9
@@ -56,28 +56,28 @@ func (b *Board) UnmarshalBinary(data []byte) error {
 		return errors.New("insufficient data for position history")
 	}
 
-	b.PositionHistory = make(map[uint64]int, count)
+	g.PositionHistory = make(map[uint64]int, count)
 	offset := 79
 	for i := 0; i < count; i++ {
 		hash := binary.LittleEndian.Uint64(data[offset : offset+8])
 		c := int(data[offset+8])
-		b.PositionHistory[hash] = c
+		g.PositionHistory[hash] = c
 		offset += 9
 	}
 
 	// Recompute Zobrist hash for current position
-	b.ZobristHash = b.computeZobrist()
+	g.ZobristHash = g.computeZobrist()
 
 	// Update legal moves and check status
-	b.GenerateLegalMoves()
-	b.IsCheck = b.ComputeIsCheck()
-	b.IsCheckmate = b.IsCheck && !b.hasMoves()
-	b.IsStalement = !b.IsCheckmate && !b.hasMoves()
-	b.IsMaterialDraw = b.hasInsufficientMaterial()
-	b.IsThreefoldRepetition = b.checkThreefoldRepetition()
-	b.IsFiftyMoveRule = b.checkFiftyMoveRule()
-	b.IsSeventyFiveMoveRule = b.checkSeventyFiveMoveRule()
-	b.IsFinished = b.IsCheckmate || b.IsStalement || b.IsMaterialDraw || b.IsFivefoldRepetition() || b.IsSeventyFiveMoveRule
+	g.GenerateLegalMoves()
+	g.IsCheck = g.ComputeIsCheck()
+	g.IsCheckmate = g.IsCheck && !g.hasMoves()
+	g.IsStalement = !g.IsCheckmate && !g.hasMoves()
+	g.IsMaterialDraw = g.hasInsufficientMaterial()
+	g.IsThreefoldRepetition = g.checkThreefoldRepetition()
+	g.IsFiftyMoveRule = g.checkFiftyMoveRule()
+	g.IsSeventyFiveMoveRule = g.checkSeventyFiveMoveRule()
+	g.IsFinished = g.IsCheckmate || g.IsStalement || g.IsMaterialDraw || g.IsFivefoldRepetition() || g.IsSeventyFiveMoveRule
 
 	return nil
 }
