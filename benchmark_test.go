@@ -13,9 +13,9 @@ func BenchmarkInitializeBoardFromFEN(b *testing.B) {
 
 	for _, fen := range fens {
 		fen := fen
-		board := &Board{}
 		b.Run(fen, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
+				board := &Board{}
 				if err := board.InitFromFen(fen); err != nil {
 					b.Fatalf("init fen: %v", err)
 				}

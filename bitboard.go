@@ -95,12 +95,10 @@ func (bb *Bitboard) popLSB() uint {
 	return lsb.lsbIndex()
 }
 
-func (b *Bitboard) NumberOfSetBits() int {
+func (b Bitboard) NumberOfSetBits() int {
 	count := 0
-	c := Bitboard(*b)
-	for c > 0 {
-		count = count + 1
-		c.popLSB()
+	for c := b; c > 0; c.popLSB() {
+		count++
 	}
 	return count
 }
