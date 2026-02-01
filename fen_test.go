@@ -7,7 +7,7 @@ import (
 )
 
 func Test_LoadFen(t *testing.T) {
-	b := NewBoard()
+	g := NewGame()
 	fens := []string{
 		"rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1",
 		"rnbqkbnr/pp1ppppp/8/2p5/4P3/8/PPPP1PPP/RNBQKBNR w KQkq c6 0 2",
@@ -18,15 +18,15 @@ func Test_LoadFen(t *testing.T) {
 		"rnb1kbnr/ppp2ppp/8/8/2qp4/5N2/PPP2PPP/RNBQK2R w KQkq - 0 6",
 	}
 	for _, fen := range fens {
-		b.LoadFen(fen)
-		require.Equal(t, fen, b.ToFen())
+		g.LoadFen(fen)
+		require.Equal(t, fen, g.ToFen())
 	}
 
 }
 
 func Test_ToFen(t *testing.T) {
-	b := NewBoard()
-	require.Equal(t, STARTING_POSITION_FEN, b.ToFen())
-	b.LoadFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
-	require.Equal(t, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", b.ToFen())
+	g := NewGame()
+	require.Equal(t, STARTING_POSITION_FEN, g.ToFen())
+	g.LoadFen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1")
+	require.Equal(t, "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", g.ToFen())
 }

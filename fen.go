@@ -33,9 +33,9 @@ var FILE_TO_STRING = map[int]string{0: "a", 1: "b", 2: "c", 3: "d", 4: "e", 5: "
 var RANK_TO_STRING = map[int]string{0: "8", 1: "7", 2: "6", 3: "5", 4: "4", 5: "3", 6: "2", 7: "1"}
 
 // initialize board from FEN string
-func (b *Board) LoadFen(fen string) error {
-	b.Reset()
-	b.Fen = fen
+func (g *Game) LoadFen(fen string) error {
+	g.Reset()
+	g.Fen = fen
 	i := 0
 	for i < len(fen) && fen[i] == ' ' {
 		i++
@@ -57,44 +57,44 @@ func (b *Board) LoadFen(fen string) error {
 				if idx > 63 {
 					return fmt.Errorf(E_INVALID_FEN)
 				}
-				b.addPiece(EMPTY, idx)
+				g.addPiece(EMPTY, idx)
 				idx++
 			}
 		case 'p':
-			b.addPiece(B_PAWN, idx)
+			g.addPiece(B_PAWN, idx)
 			idx++
 		case 'n':
-			b.addPiece(B_KNIGHT, idx)
+			g.addPiece(B_KNIGHT, idx)
 			idx++
 		case 'b':
-			b.addPiece(B_BISHOP, idx)
+			g.addPiece(B_BISHOP, idx)
 			idx++
 		case 'r':
-			b.addPiece(B_ROOK, idx)
+			g.addPiece(B_ROOK, idx)
 			idx++
 		case 'q':
-			b.addPiece(B_QUEEN, idx)
+			g.addPiece(B_QUEEN, idx)
 			idx++
 		case 'k':
-			b.addPiece(B_KING, idx)
+			g.addPiece(B_KING, idx)
 			idx++
 		case 'P':
-			b.addPiece(W_PAWN, idx)
+			g.addPiece(W_PAWN, idx)
 			idx++
 		case 'N':
-			b.addPiece(W_KNIGHT, idx)
+			g.addPiece(W_KNIGHT, idx)
 			idx++
 		case 'B':
-			b.addPiece(W_BISHOP, idx)
+			g.addPiece(W_BISHOP, idx)
 			idx++
 		case 'R':
-			b.addPiece(W_ROOK, idx)
+			g.addPiece(W_ROOK, idx)
 			idx++
 		case 'Q':
-			b.addPiece(W_QUEEN, idx)
+			g.addPiece(W_QUEEN, idx)
 			idx++
 		case 'K':
-			b.addPiece(W_KING, idx)
+			g.addPiece(W_KING, idx)
 			idx++
 		default:
 			return fmt.Errorf(E_INVALID_FEN)
@@ -113,9 +113,9 @@ func (b *Board) LoadFen(fen string) error {
 		return fmt.Errorf(E_INVALID_FEN)
 	}
 	if fen[i] == 'w' {
-		b.Turn = WHITE
+		g.Turn = WHITE
 	} else if fen[i] == 'b' {
-		b.Turn = BLACK
+		g.Turn = BLACK
 	} else {
 		return fmt.Errorf(E_INVALID_FEN)
 	}
@@ -126,20 +126,20 @@ func (b *Board) LoadFen(fen string) error {
 	i++
 
 	// Castling
-	b.Castling = 0
+	g.Castling = 0
 	if i < len(fen) && fen[i] == '-' {
 		i++
 	} else {
 		for ; i < len(fen) && fen[i] != ' '; i++ {
 			switch fen[i] {
 			case 'K':
-				b.Castling |= CASTLE_WKS
+				g.Castling |= CASTLE_WKS
 			case 'Q':
-				b.Castling |= CASTLE_WQS
+				g.Castling |= CASTLE_WQS
 			case 'k':
-				b.Castling |= CASTLE_BKS
+				g.Castling |= CASTLE_BKS
 			case 'q':
-				b.Castling |= CASTLE_BQS
+				g.Castling |= CASTLE_BQS
 			default:
 				return fmt.Errorf(E_INVALID_FEN)
 			}
@@ -155,7 +155,7 @@ func (b *Board) LoadFen(fen string) error {
 		return fmt.Errorf(E_INVALID_FEN)
 	}
 	if fen[i] == '-' {
-		b.EnPassant = 0
+		g.EnPassant = 0
 		i++
 	} else {
 		if i+1 >= len(fen) {
@@ -167,7 +167,7 @@ func (b *Board) LoadFen(fen string) error {
 		}
 		file := int(fileChar - 'a')
 		rank := 8 - int(rankChar-'0')
-		b.EnPassant = CoordsToSquare(rank, file)
+		g.EnPassant = CoordsToSquare(rank, file)
 		i += 2
 	}
 	if i >= len(fen) || fen[i] != ' ' {
@@ -191,7 +191,7 @@ func (b *Board) LoadFen(fen string) error {
 		return fmt.Errorf(E_INVALID_FEN)
 	}
 	i++
-	b.HalfMoves = halfMoves
+	g.HalfMoves = halfMoves
 
 	// Full-move number
 	fullMoves := 0
@@ -210,30 +210,30 @@ func (b *Board) LoadFen(fen string) error {
 			}
 		}
 	}
-	b.FullMoves = fullMoves
+	g.FullMoves = fullMoves
 
-	if b.PositionHistory == nil {
-		b.PositionHistory = map[uint64]int{}
+	if g.PositionHistory == nil {
+		g.PositionHistory = map[uint64]int{}
 	}
-	b.recordPosition()
+	g.recordPosition()
 
 	return nil
 }
 
 // return FEN representation of board
-func (b *Board) ToFen() string {
+func (g *Game) ToFen() string {
 	var pieces, turn, castling, enPassant string
 
 	pieces = ""
 	var i, emptyCount int = 0, 0
 	for rank := 0; rank < 8; rank++ {
 		for file := 0; file < 8; file++ {
-			if b.Squares[i] != EMPTY {
-				pieces += string(PIECE_TO_RUNE[b.Squares[i]])
+			if g.Squares[i] != EMPTY {
+				pieces += string(PIECE_TO_RUNE[g.Squares[i]])
 				i++
 				continue
 			}
-			for emptyCount = 0; file < 8 && b.Squares[i] == EMPTY; {
+			for emptyCount = 0; file < 8 && g.Squares[i] == EMPTY; {
 				emptyCount++
 				i++
 				file++
@@ -248,35 +248,35 @@ func (b *Board) ToFen() string {
 		}
 	}
 
-	if b.Turn == WHITE {
+	if g.Turn == WHITE {
 		turn = "w"
 	} else {
 		turn = "b"
 	}
 
 	castling = ""
-	if (b.Castling & CASTLE_WKS) > 0 {
+	if (g.Castling & CASTLE_WKS) > 0 {
 		castling += "K"
 	}
-	if (b.Castling & CASTLE_WQS) > 0 {
+	if (g.Castling & CASTLE_WQS) > 0 {
 		castling += "Q"
 	}
-	if (b.Castling & CASTLE_BKS) > 0 {
+	if (g.Castling & CASTLE_BKS) > 0 {
 		castling += "k"
 	}
-	if (b.Castling & CASTLE_BQS) > 0 {
+	if (g.Castling & CASTLE_BQS) > 0 {
 		castling += "q"
 	}
 	if len(castling) == 0 {
 		castling = "-"
 	}
 
-	if b.EnPassant == 0 {
+	if g.EnPassant == 0 {
 		enPassant = "-"
 	} else {
-		rank, file := squareCoords(b.EnPassant)
+		rank, file := squareCoords(g.EnPassant)
 		enPassant = FILE_TO_STRING[file] + RANK_TO_STRING[rank]
 	}
 
-	return fmt.Sprintf("%s %s %s %s %d %d", pieces, turn, castling, enPassant, b.HalfMoves, b.FullMoves)
+	return fmt.Sprintf("%s %s %s %s %d %d", pieces, turn, castling, enPassant, g.HalfMoves, g.FullMoves)
 }

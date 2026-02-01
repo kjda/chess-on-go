@@ -5,41 +5,41 @@ import (
 )
 
 func TestUndoMove(t *testing.T) {
-	b := NewBoard()
-	startHash := b.ZobristHash
-	startFen := b.ToFen()
+	g := NewGame()
+	startHash := g.ZobristHash
+	startFen := g.ToFen()
 
-	b.GenerateLegalMoves()
-	if len(b.LegalMoves) == 0 {
+	g.GenerateLegalMoves()
+	if len(g.LegalMoves) == 0 {
 		t.Fatal("No moves at start?")
 	}
 
-	move := b.LegalMoves[0] // e.g. a3
-	b.MakeMove(move)
+	move := g.LegalMoves[0] // e.g. a3
+	g.MakeMove(move)
 
-	if b.ZobristHash == startHash {
+	if g.ZobristHash == startHash {
 		t.Error("Hash did not change after move")
 	}
 
-	b.UndoMove(move)
+	g.UndoMove(move)
 
-	if b.ZobristHash != startHash {
-		t.Errorf("Hash mismatch after Undo. Got %v, Want %v", b.ZobristHash, startHash)
+	if g.ZobristHash != startHash {
+		t.Errorf("Hash mismatch after Undo. Got %v, Want %v", g.ZobristHash, startHash)
 	}
 
-	currentFen := b.ToFen()
+	currentFen := g.ToFen()
 	if currentFen != startFen {
 		t.Errorf("FEN mismatch after Undo.\nWant: %s\nGot : %s", startFen, currentFen)
 	}
 
 	// Check turn
-	if b.Turn != WHITE {
-		t.Errorf("Turn mismatch. Got %v, Want WHITE", b.Turn)
+	if g.Turn != WHITE {
+		t.Errorf("Turn mismatch. Got %v, Want WHITE", g.Turn)
 	}
 
 	// Check FullMoves
-	if b.FullMoves != 1 {
-		t.Errorf("FullMoves mismatch. Got %d, Want 1", b.FullMoves)
+	if g.FullMoves != 1 {
+		t.Errorf("FullMoves mismatch. Got %d, Want 1", g.FullMoves)
 	}
 }
 
@@ -47,20 +47,20 @@ func TestUndoMove_Capture(t *testing.T) {
 	// Setup a position with capture
 	// Custom fen: White Pawn e4, Black Pawn d5.
 	fen := "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2"
-	b := &Board{}
-	err := b.LoadFen(fen)
+	g := &Game{}
+	err := g.LoadFen(fen)
 	if err != nil {
 		t.Fatalf("Failed to parse FEN: %v", err)
 	}
-	startHash := b.ZobristHash
-	startFen := b.ToFen()
+	startHash := g.ZobristHash
+	startFen := g.ToFen()
 
 	// Find move e4xd5
-	b.GenerateLegalMoves()
+	g.GenerateLegalMoves()
 	var capMove Move
 	found := false
-	for _, m := range b.LegalMoves {
-		if b.Squares[m.To()] != EMPTY { // Capture
+	for _, m := range g.LegalMoves {
+		if g.Squares[m.To()] != EMPTY { // Capture
 			capMove = m
 			found = true
 			break
@@ -70,20 +70,20 @@ func TestUndoMove_Capture(t *testing.T) {
 	if !found {
 		// e4xd5 should be possible.
 	} else {
-		b.MakeMove(capMove)
-		b.UndoMove(capMove)
+		g.MakeMove(capMove)
+		g.UndoMove(capMove)
 
-		if b.Squares[capMove.To()] == EMPTY {
+		if g.Squares[capMove.To()] == EMPTY {
 			t.Error("Captured piece not restored")
 		}
-		if b.Squares[capMove.To()].Kind() != PAWN { // it was a pawn
+		if g.Squares[capMove.To()].Kind() != PAWN { // it was a pawn
 			t.Error("Restored piece is incorrect kind")
 		}
-		if b.ZobristHash != startHash {
-			t.Errorf("Hash mismatch. Want %x Got %x", startHash, b.ZobristHash)
+		if g.ZobristHash != startHash {
+			t.Errorf("Hash mismatch. Want %x Got %x", startHash, g.ZobristHash)
 		}
-		if b.ToFen() != startFen {
-			t.Errorf("FEN mismatch.\nWant: %s\nGot : %s", startFen, b.ToFen())
+		if g.ToFen() != startFen {
+			t.Errorf("FEN mismatch.\nWant: %s\nGot : %s", startFen, g.ToFen())
 		}
 	}
 }
@@ -91,18 +91,18 @@ func TestUndoMove_Capture(t *testing.T) {
 func TestUndoMove_Castling(t *testing.T) {
 	// Setup position for White King Side castling
 	fen := "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQK2R w KQkq - 0 1" // h1 rook, e1 king, empty f1, g1
-	b := &Board{}
-	b.LoadFen(fen)
-	startHash := b.ZobristHash
-	startFen := b.ToFen()
+	g := &Game{}
+	g.LoadFen(fen)
+	startHash := g.ZobristHash
+	startFen := g.ToFen()
 
 	// Create castling move (e1 -> g1)
 	// MakeMove detects castling by moveKind? No, NewMove likely needs the flag.
 	// But `GenerateLegalMoves` sets it.
-	b.GenerateLegalMoves()
+	g.GenerateLegalMoves()
 	var castleMove Move
 	found := false
-	for _, mv := range b.LegalMoves {
+	for _, mv := range g.LegalMoves {
 		if mv.IsCastlingMove() {
 			castleMove = mv
 			found = true
@@ -114,20 +114,20 @@ func TestUndoMove_Castling(t *testing.T) {
 		t.Fatal("Castling move not generated")
 	}
 
-	b.MakeMove(castleMove)
-	b.UndoMove(castleMove)
+	g.MakeMove(castleMove)
+	g.UndoMove(castleMove)
 
-	if b.ZobristHash != startHash {
-		t.Errorf("Hash mismatch. Want %x Got %x", startHash, b.ZobristHash)
+	if g.ZobristHash != startHash {
+		t.Errorf("Hash mismatch. Want %x Got %x", startHash, g.ZobristHash)
 	}
-	if b.ToFen() != startFen {
-		t.Errorf("FEN mismatch.\nWant: %s\nGot : %s", startFen, b.ToFen())
+	if g.ToFen() != startFen {
+		t.Errorf("FEN mismatch.\nWant: %s\nGot : %s", startFen, g.ToFen())
 	}
 	// Verify Rook position
-	if b.Squares[63] == EMPTY || b.Squares[63].Kind() != ROOK {
+	if g.Squares[63] == EMPTY || g.Squares[63].Kind() != ROOK {
 		t.Error("Rook not restored to h1")
 	}
-	if b.Squares[61] != EMPTY {
+	if g.Squares[61] != EMPTY {
 		t.Error("f1 not empty")
 	}
 }
@@ -137,15 +137,15 @@ func TestUndoMove_EnPassant(t *testing.T) {
 	// FEN: rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3
 	// e5 captures d6 (en passant)
 	fen := "rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 3"
-	b := &Board{}
-	b.LoadFen(fen)
-	startHash := b.ZobristHash
-	startFen := b.ToFen()
+	g := &Game{}
+	g.LoadFen(fen)
+	startHash := g.ZobristHash
+	startFen := g.ToFen()
 
-	b.GenerateLegalMoves()
+	g.GenerateLegalMoves()
 	var epMove Move
 	found := false
-	for _, m := range b.LegalMoves {
+	for _, m := range g.LegalMoves {
 		if m.IsEnPassant() {
 			epMove = m
 			found = true
@@ -156,23 +156,23 @@ func TestUndoMove_EnPassant(t *testing.T) {
 		t.Fatal("En Passant move not generated")
 	}
 
-	b.MakeMove(epMove)
-	b.UndoMove(epMove)
+	g.MakeMove(epMove)
+	g.UndoMove(epMove)
 
-	if b.ZobristHash != startHash {
-		t.Errorf("Hash mismatch. Want %x Got %x", startHash, b.ZobristHash)
+	if g.ZobristHash != startHash {
+		t.Errorf("Hash mismatch. Want %x Got %x", startHash, g.ZobristHash)
 	}
-	if b.ToFen() != startFen {
-		t.Errorf("FEN mismatch.\nWant: %s\nGot : %s", startFen, b.ToFen())
+	if g.ToFen() != startFen {
+		t.Errorf("FEN mismatch.\nWant: %s\nGot : %s", startFen, g.ToFen())
 	}
 
 	// Check captured pawn restored at d5, not d6
 	// Rank 5 (d5): Start 24. d=3. Index 27.
 	// Rank 6 (d6): Start 16. d=3. Index 19.
-	if b.Squares[27] == EMPTY || b.Squares[27].Kind() != PAWN {
+	if g.Squares[27] == EMPTY || g.Squares[27].Kind() != PAWN {
 		t.Error("Captured pawn not restored at d5")
 	}
-	if b.Squares[19] != EMPTY {
+	if g.Squares[19] != EMPTY {
 		t.Error("En Passant target square not empty after undo")
 	}
 }
@@ -180,15 +180,15 @@ func TestUndoMove_EnPassant(t *testing.T) {
 func TestUndoMove_Promotion(t *testing.T) {
 	// Position: White Pawn a7, Black King e8.
 	fen := "4k3/P7/8/8/8/8/8/4K3 w - - 0 1"
-	b := &Board{}
-	b.LoadFen(fen)
-	startHash := b.ZobristHash
-	startFen := b.ToFen()
+	g := &Game{}
+	g.LoadFen(fen)
+	startHash := g.ZobristHash
+	startFen := g.ToFen()
 
-	b.GenerateLegalMoves()
+	g.GenerateLegalMoves()
 	var promoMove Move
 	found := false
-	for _, m := range b.LegalMoves {
+	for _, m := range g.LegalMoves {
 		if m.IsPromotionMove() {
 			promoMove = m // grab any promotion (Queen usually first)
 			found = true
@@ -199,14 +199,14 @@ func TestUndoMove_Promotion(t *testing.T) {
 		t.Fatal("Promotion move not generated")
 	}
 
-	b.MakeMove(promoMove)
-	b.UndoMove(promoMove)
+	g.MakeMove(promoMove)
+	g.UndoMove(promoMove)
 
-	if b.ZobristHash != startHash {
-		t.Errorf("Hash mismatch. Want %x Got %x", startHash, b.ZobristHash)
+	if g.ZobristHash != startHash {
+		t.Errorf("Hash mismatch. Want %x Got %x", startHash, g.ZobristHash)
 	}
-	if b.ToFen() != startFen {
-		t.Errorf("FEN mismatch.\nWant: %s\nGot : %s", startFen, b.ToFen())
+	if g.ToFen() != startFen {
+		t.Errorf("FEN mismatch.\nWant: %s\nGot : %s", startFen, g.ToFen())
 	}
 
 	// Check pawn at a7
@@ -216,7 +216,7 @@ func TestUndoMove_Promotion(t *testing.T) {
 	// Let's verify Square mapping.
 	// bitboard layout usually 0=a1 or a8 depending on impl.
 	// `square.go` likely has the mapping.
-	// Assuming `b.Squares[8]` matches `a7` if Fen parsing worked and put it there.
-	// `b.LoadFen` parses `P`.
+	// Assuming `g.Squares[8]` matches `a7` if Fen parsing worked and put it there.
+	// `g.LoadFen` parses `P`.
 	// Let's trust `ToFen` matching means board is restored.
 }

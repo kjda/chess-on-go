@@ -9,7 +9,7 @@ import (
 // LoadPGN loads a PGN string into the board, playing all main-line moves and
 // recording position history via Zobrist hashing. Variations and comments are
 // ignored; only the main line is applied.
-func (b *Board) LoadPGN(pgn string) error {
+func (g *Game) LoadPGN(pgn string) error {
 	fastPath := !strings.ContainsAny(pgn, "[{(")
 	startFEN := STARTING_POSITION_FEN
 	if !fastPath {
@@ -17,12 +17,12 @@ func (b *Board) LoadPGN(pgn string) error {
 			startFEN = fen
 		}
 	}
-	if err := b.LoadFen(startFEN); err != nil {
+	if err := g.LoadFen(startFEN); err != nil {
 		return err
 	}
 	// Initial generation of legal moves so the loop can start matching immediately.
-	// Subsequent generations are handled by b.MakeMove().
-	b.GenerateLegalMoves()
+	// Subsequent generations are handled by g.MakeMove().
+	g.GenerateLegalMoves()
 
 	var tokens []string
 	if fastPath {
@@ -50,16 +50,16 @@ func (b *Board) LoadPGN(pgn string) error {
 
 		// b.GenerateLegalMoves() is already done by LoadFen (initially) and MakeMove (subsequently).
 		matched := false
-		for _, mv := range b.LegalMoves {
+		for _, mv := range g.LegalMoves {
 			if target != -1 && int(mv.To()) != target {
 				continue
 			}
 
 			// Optimization: GetMoveSanWithoutSuffix avoids cloning the board (to check for check/mate)
 			// which is very expensive. We strip annotations from the token anyway.
-			san := trimSANAnnotations(b.GetMoveSanWithoutSuffix(mv))
+			san := trimSANAnnotations(g.GetMoveSanWithoutSuffix(mv))
 			if san == tok {
-				b.MakeMove(mv)
+				g.MakeMove(mv)
 				matched = true
 				break
 			}
@@ -72,14 +72,14 @@ func (b *Board) LoadPGN(pgn string) error {
 	return nil
 }
 
-// LoadPGNBoard is a helper that constructs a fresh board, loads the PGN, and
+// LoadPGNGame is a helper that constructs a fresh board, loads the PGN, and
 // returns the populated board.
-func LoadPGNBoard(pgn string) (*Board, error) {
-	b := &Board{}
-	if err := b.LoadPGN(pgn); err != nil {
+func LoadPGNGame(pgn string) (*Game, error) {
+	g := &Game{}
+	if err := g.LoadPGN(pgn); err != nil {
 		return nil, err
 	}
-	return b, nil
+	return g, nil
 }
 
 func extractFENFromPGN(pgn string) string {

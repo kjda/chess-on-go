@@ -7,7 +7,7 @@ import (
 )
 
 func TestFiftyMoveRule(t *testing.T) {
-	b := NewBoard()
+	b := NewGame()
 	// Simulate 100 half moves without pawn move or capture
 	// We can manually set HalfMoves for testing since we trust internal increment logic which is tested elsewhere or trivial
 	b.HalfMoves = 100
@@ -31,7 +31,7 @@ func TestFiftyMoveRule(t *testing.T) {
 }
 
 func TestSeventyFiveMoveRule(t *testing.T) {
-	b := NewBoard()
+	b := NewGame()
 	b.HalfMoves = 149
 
 	b.GenerateLegalMoves()
