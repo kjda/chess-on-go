@@ -53,6 +53,7 @@ type Board struct {
 	IsFiftyMoveRule       bool
 	IsSeventyFiveMoveRule bool
 	IsFinished            bool
+	History               []GameState
 }
 
 func (b *Board) Reset() {
@@ -82,6 +83,7 @@ func (b *Board) Reset() {
 	b.IsFiftyMoveRule = false
 	b.IsSeventyFiveMoveRule = false
 	b.IsFinished = false
+	b.History = []GameState{}
 }
 
 func NewBoard() *Board {
@@ -114,10 +116,12 @@ func CloneBoard(b *Board) Board {
 		IsStalement:     b.IsStalement,
 		IsMaterialDraw:  b.IsMaterialDraw,
 		IsFinished:      b.IsFinished,
+		History:         make([]GameState, len(b.History)),
 	}
 	copy(clone.Whites[:], b.Whites[:])
 	copy(clone.Blacks[:], b.Blacks[:])
 	copy(clone.Squares[:], b.Squares[:])
+	copy(clone.History, b.History)
 	for k, v := range b.PositionHistory {
 		clone.PositionHistory[k] = v
 	}
@@ -275,4 +279,12 @@ func (b *Board) checkFiftyMoveRule() bool {
 
 func (b *Board) checkSeventyFiveMoveRule() bool {
 	return b.HalfMoves >= 150
+}
+
+type GameState struct {
+	CapturedPiece Piece
+	Castling      int
+	EnPassant     Square
+	HalfMoves     int
+	ZobristHash   uint64
 }

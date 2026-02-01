@@ -2,6 +2,8 @@ package chessongo
 
 import "strings"
 
+const maxGeneratedMoves = 256
+
 var genMovesCalls uint = 0
 
 // Generate all peseudo moves
@@ -16,7 +18,11 @@ func (b *Board) GeneratePseudoMoves() {
 		oursAll = b.BlackPieces
 	}
 	// Reuse underlying array capacity if available
-	b.PseudoMoves = b.PseudoMoves[:0]
+	if cap(b.PseudoMoves) < maxGeneratedMoves {
+		b.PseudoMoves = make([]Move, 0, maxGeneratedMoves)
+	} else {
+		b.PseudoMoves = b.PseudoMoves[:0]
+	}
 	b.genPawnOneStep()
 	b.genPawnTwoSteps()
 	b.genPawnAttacks()
@@ -32,7 +38,12 @@ func (b *Board) GenerateLegalMoves() {
 	// Ensure current check status is known before validating castling legality.
 	b.IsCheck = b.ComputeIsCheck()
 	b.GeneratePseudoMoves()
-	b.LegalMoves = b.LegalMoves[:0]
+	needed := len(b.PseudoMoves)
+	if cap(b.LegalMoves) < needed {
+		b.LegalMoves = make([]Move, 0, needed)
+	} else {
+		b.LegalMoves = b.LegalMoves[:0]
+	}
 	for _, move := range b.PseudoMoves {
 		if b.CanMove(move) {
 			b.LegalMoves = append(b.LegalMoves, move)
@@ -302,12 +313,31 @@ func (b *Board) CanMove(m Move) bool {
 }
 
 func (b *Board) WillMoveCauseCheck(m Move) bool {
-	clone := CloneBoard(b)
+	// Optimization: Stack-copy the board. accessing underlying arrays by value.
+	// Since justMove/ComputeIsCheck don't modify maps/slices (only arrays/primitives), this is safe and allocation-free.
+	clone := *b
 	clone.justMove(m)
-	return clone.ComputeIsCheck() == true
+	return clone.ComputeIsCheck()
 }
 
 func (b *Board) MakeMove(m Move) {
+	// Capture state for UndoMove
+	capturedPiece := b.Squares[m.To()]
+	if m.IsEnPassant() {
+		if b.Turn == WHITE {
+			capturedPiece = b.Squares[m.To()+8]
+		} else {
+			capturedPiece = b.Squares[m.To()-8]
+		}
+	}
+	b.History = append(b.History, GameState{
+		CapturedPiece: capturedPiece,
+		Castling:      b.Castling,
+		EnPassant:     b.EnPassant,
+		HalfMoves:     b.HalfMoves,
+		ZobristHash:   b.ZobristHash,
+	})
+
 	if b.ShouldResetPly(m) {
 		b.HalfMoves = 0
 	} else {
@@ -605,4 +635,156 @@ func (b *Board) GetOthersOfSameKindMovingToSameTargetCounts(themove Move) (other
 		}
 	}
 	return
+}
+
+func (b *Board) UndoMove(m Move) {
+	if len(b.History) == 0 {
+		return
+	}
+	// Decrement history count for current position
+	if b.PositionHistory != nil {
+		b.PositionHistory[b.ZobristHash]--
+		if b.PositionHistory[b.ZobristHash] <= 0 {
+			delete(b.PositionHistory, b.ZobristHash)
+		}
+	}
+
+	// Pop state
+	state := b.History[len(b.History)-1]
+	b.History = b.History[:len(b.History)-1]
+
+	// Restore simple fields
+	b.Castling = state.Castling
+	b.EnPassant = state.EnPassant
+	b.HalfMoves = state.HalfMoves
+	b.ZobristHash = state.ZobristHash
+
+	// Flip Turn back
+	if b.Turn == WHITE {
+		b.Turn = BLACK
+		b.FullMoves--
+	} else {
+		b.Turn = WHITE
+	}
+
+	b.unmakeMove(m, state.CapturedPiece)
+
+	// Re-calculate derived state
+	b.GenerateLegalMoves()
+	b.IsCheck = b.ComputeIsCheck()
+	b.IsCheckmate = b.IsCheck && !b.hasMoves()
+	b.IsStalement = !b.IsCheckmate && !b.hasMoves()
+	b.IsMaterialDraw = b.hasInsufficientMaterial()
+	b.IsThreefoldRepetition = b.checkThreefoldRepetition()
+	b.IsFiftyMoveRule = b.checkFiftyMoveRule()
+	b.IsSeventyFiveMoveRule = b.checkSeventyFiveMoveRule()
+	b.IsFinished = (b.IsCheckmate || b.IsStalement || b.IsMaterialDraw || b.IsFivefoldRepetition() || b.IsSeventyFiveMoveRule)
+}
+
+func (b *Board) unmakeMove(m Move, captured Piece) {
+	from := m.From()
+	to := m.To()
+
+	movingPieceKind := b.Squares[to].Kind()
+	movingColor := b.Turn
+
+	if m.IsPromotionMove() {
+		// The piece at `to` is the promoted piece.
+		promotedKind := m.GetPromotionTo()
+
+		toBB := Bitboard(0x1 << to)
+		fromBB := Bitboard(0x1 << from)
+
+		if movingColor == WHITE {
+			b.Whites[promotedKind] &= ^toBB
+			b.WhitePieces &= ^toBB
+			// Restore Pawn at `from`
+			b.Whites[PAWN] |= fromBB
+			b.WhitePieces |= fromBB
+		} else {
+			b.Blacks[promotedKind] &= ^toBB
+			b.BlackPieces &= ^toBB
+			b.Blacks[PAWN] |= fromBB
+			b.BlackPieces |= fromBB
+		}
+		b.Squares[to] = EMPTY
+		b.Squares[from] = Piece(uint(PAWN) | uint(movingColor))
+		b.Occupied &= ^toBB
+		b.Occupied |= fromBB
+
+	} else {
+		toBB := Bitboard(0x1 << to)
+		fromBB := Bitboard(0x1 << from)
+
+		if movingColor == WHITE {
+			b.Whites[movingPieceKind] &= ^toBB
+			b.Whites[movingPieceKind] |= fromBB
+			b.WhitePieces &= ^toBB
+			b.WhitePieces |= fromBB
+		} else {
+			b.Blacks[movingPieceKind] &= ^toBB
+			b.Blacks[movingPieceKind] |= fromBB
+			b.BlackPieces &= ^toBB
+			b.BlackPieces |= fromBB
+		}
+
+		b.Occupied &= ^toBB
+		b.Occupied |= fromBB
+
+		b.Squares[from] = b.Squares[to]
+		b.Squares[to] = EMPTY
+	}
+
+	if captured != EMPTY {
+		if m.IsEnPassant() {
+			var capSq Square
+			if movingColor == WHITE {
+				capSq = to + 8
+			} else {
+				capSq = to - 8
+			}
+			b.addPiece(captured, int(capSq))
+		} else {
+			b.addPiece(captured, int(to))
+		}
+	}
+
+	if m.IsCastlingMove() {
+		var rookFrom, rookTo Square
+
+		if m.To() == WKS_KING_TO_SQUARE { // g1
+			rookFrom = 61 // f1
+			rookTo = 63   // h1
+		} else if m.To() == WQS_KING_TO_SQUARE { // c1
+			rookFrom = 59 // d1
+			rookTo = 56   // a1
+		} else if m.To() == BKS_KING_TO_SQUARE { // g8
+			rookFrom = 5 // f8
+			rookTo = 7   // h8
+		} else if m.To() == BQS_KING_TO_SQUARE { // c8
+			rookFrom = 3 // d8
+			rookTo = 0   // a8
+		}
+
+		// Move rook back
+		rFromBB := Bitboard(0x1 << rookFrom)
+		rToBB := Bitboard(0x1 << rookTo)
+
+		if movingColor == WHITE {
+			b.Whites[ROOK] &= ^rFromBB
+			b.Whites[ROOK] |= rToBB
+			b.WhitePieces &= ^rFromBB
+			b.WhitePieces |= rToBB
+		} else {
+			b.Blacks[ROOK] &= ^rFromBB
+			b.Blacks[ROOK] |= rToBB
+			b.BlackPieces &= ^rFromBB
+			b.BlackPieces |= rToBB
+		}
+		b.Occupied &= ^rFromBB
+		b.Occupied |= rToBB
+
+		b.Squares[rookTo] = b.Squares[rookFrom]
+		b.Squares[rookFrom] = EMPTY
+	}
 }

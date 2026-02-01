@@ -7,18 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Benchmark_GenerateLegalMoves(b *testing.B) {
-
-	b.RunParallel(func(pb *testing.PB) {
-		board := NewBoard()
-		board.LoadFen("r3k2r/pppbqppp/2n2n2/1B1pp3/1b1PP3/P1N1BN2/1PP1QPPP/R3K2R b KQkq - 0 8")
-		for pb.Next() {
-			board.GenerateLegalMoves()
-		}
-	})
-
-}
-
 func Test_GenerateLegalMoves(t *testing.T) {
 	positions := map[string]int{
 		"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1":               20,
