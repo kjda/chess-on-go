@@ -2,18 +2,23 @@ package chessongo
 
 type Square uint8
 
-//get rank from square
+// get rank from square
 func (s Square) Rank() int {
 	return int(s / 8)
 }
 
-//get file from square
+// get file from square
 func (s Square) File() int {
 	return int(s % 8)
 }
 
 func (s Square) FileLetter() string {
 	return string(SQUARE_TO_COORDS[s][0])
+}
+
+// RankDigit returns the rank character ('1'-'8') as a string
+func (s Square) RankDigit() string {
+	return string(SQUARE_TO_COORDS[s][1])
 }
 
 func (s Square) Coords() string {

@@ -591,11 +591,11 @@ func (g *Game) GetMoveSanWithoutSuffix(m Move) string {
 
 		// Disambiguation:
 		othersOfSameKind, onSameFileCount, onSameRankCount := g.GetOthersOfSameKindMovingToSameTargetCounts(m)
-		if othersOfSameKind > 0 {
+		if othersOfSameKind > 0 && movingKind != PAWN {
 			if onSameFileCount == 0 {
 				sb.WriteString(m.From().FileLetter()) // -------> 1.1
 			} else if onSameRankCount == 0 {
-				sb.WriteString(m.From().FileLetter()) // -------> 1.2
+				sb.WriteString(m.From().RankDigit()) // -------> 1.2
 			} else {
 				sb.WriteString(m.From().Coords()) // -------> 1.2
 			}
@@ -613,7 +613,7 @@ func (g *Game) GetMoveSanWithoutSuffix(m Move) string {
 
 		if m.IsPromotionMove() {
 			sb.WriteString("=")
-			sb.WriteString(strings.ToUpper(string(m.GetPromotionTo()))) // -------> 5.
+			sb.WriteString(strings.ToUpper(string((m.GetPromotionTo() | WHITE).ToRune()))) // -------> 5.
 		}
 	}
 	return sb.String()
