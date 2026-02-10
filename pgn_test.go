@@ -73,9 +73,8 @@ func TestLoadPGNWithCastling(t *testing.T) {
 
 	g := &Game{}
 	require.NoError(t, g.LoadPGN(pgn))
-	// Verify both sides have castled - check for rook and king positions
-	fen := g.ToFen()
-	require.Contains(t, fen, "rk1") // Black king and rook after castling kingside
+	// Verify both sides have castled - check the complete FEN
+	require.Equal(t, "r1bq1rk1/2p1bppp/p1np1n2/1p2p3/4P3/1BP2N2/PP1P1PPP/RNBQR1K1 w - - 1 9", g.ToFen())
 }
 
 func TestLoadPGNWithPromotion(t *testing.T) {
@@ -85,7 +84,8 @@ func TestLoadPGNWithPromotion(t *testing.T) {
 
 	g := &Game{}
 	require.NoError(t, g.LoadPGN(pgn))
-	require.Contains(t, g.ToFen(), "Q") // Queen should be present after promotion
+	// Verify the queen is on a7 after promotion and subsequent move
+	require.Equal(t, "8/Q7/4k3/8/8/8/8/4K3 w - - 3 3", g.ToFen())
 }
 
 func TestLoadPGNWithEnPassant(t *testing.T) {
@@ -133,7 +133,8 @@ func TestLoadPGNWithCheckAndMateSymbols(t *testing.T) {
 
 	g := &Game{}
 	require.NoError(t, g.LoadPGN(pgn))
-	require.Contains(t, g.ToFen(), "k") // Black king should be on the board
+	// Verify the complete position after the capture sequence with check
+	require.Equal(t, "r1bq2nr/pppp1kpp/2n5/2b1p3/4P3/5N2/PPPP1PPP/RNBQK2R w KQ - 0 5", g.ToFen())
 }
 
 func TestLoadPGNInvalidMove(t *testing.T) {
