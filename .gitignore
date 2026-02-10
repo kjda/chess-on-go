@@ -1,0 +1,3 @@
+*.out
+coverage.out
+pgn_coverage.out
