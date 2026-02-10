@@ -204,14 +204,20 @@ func TestExtractFENFromPGNEdgeCases(t *testing.T) {
 			expectedFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 		},
 		{
-			name:        "No FEN tag",
-			pgn:         `[Event "Test"]\n[White "Player1"]`,
+			name: "No FEN tag",
+			pgn: `[Event "Test"]
+[White "Player1"]`,
 			expectedFEN: "",
 		},
 		{
 			name:        "Empty PGN",
 			pgn:         "",
 			expectedFEN: "",
+		},
+		{
+			name:        "FEN with trailing spaces in value",
+			pgn:         `[FEN "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1  "]`,
+			expectedFEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
 		},
 	}
 
