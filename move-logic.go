@@ -597,7 +597,7 @@ func (g *Game) GetMoveSanWithoutSuffix(m Move) string {
 			} else if onSameRankCount == 0 {
 				sb.WriteString(m.From().RankDigit()) // -------> 1.2
 			} else {
-				sb.WriteString(m.From().Coords()) // -------> 1.2
+				sb.WriteString(m.From().Coords()) // -------> 1.3
 			}
 		}
 
@@ -621,16 +621,17 @@ func (g *Game) GetMoveSanWithoutSuffix(m Move) string {
 
 func (g *Game) GetOthersOfSameKindMovingToSameTargetCounts(themove Move) (otherOfSameKind int, onSameFileCount int, onSameRankCount int) {
 	movingPiece := g.Squares[themove.From()]
+	from := themove.From()
 	to := themove.To()
 	for _, m := range g.LegalMoves {
 		if m == themove || m.To() != to || g.Squares[m.From()].Kind() != movingPiece.Kind() {
 			continue
 		}
 		otherOfSameKind += 1
-		if m.From().File() == to.File() {
+		if m.From().File() == from.File() {
 			onSameFileCount += 1
 		}
-		if m.From().Rank() == to.Rank() {
+		if m.From().Rank() == from.Rank() {
 			onSameRankCount += 1
 		}
 	}
