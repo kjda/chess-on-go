@@ -277,11 +277,11 @@ func (g *Game) IsFivefoldRepetition() bool {
 }
 
 func (g *Game) checkFiftyMoveRule() bool {
-	return g.Ply >= 100
+	return g.HalfMoves >= 100
 }
 
 func (g *Game) checkSeventyFiveMoveRule() bool {
-	return g.Ply >= 150
+	return g.HalfMoves >= 150
 }
 
 type GameState struct {
