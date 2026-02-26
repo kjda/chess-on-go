@@ -338,11 +338,12 @@ func (g *Game) MakeMove(m Move) {
 		ZobristHash:   g.ZobristHash,
 	})
 
-	if g.ShouldResetPly(m) {
+	if g.ShouldResetHalfMoves(m) {
 		g.HalfMoves = 0
 	} else {
 		g.HalfMoves++
 	}
+
 	if g.ShouldIncFullMoves(m) {
 		g.FullMoves++
 	}

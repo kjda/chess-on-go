@@ -9,8 +9,8 @@ import (
 func TestFiftyMoveRule(t *testing.T) {
 	b := NewGame()
 	// Simulate 100 half moves without pawn move or capture
-	// We can manually set HalfMoves for testing since we trust internal increment logic which is tested elsewhere or trivial
-	b.HalfMoves = 100
+	// We can manually set Ply for testing since we trust internal increment logic which is tested elsewhere or trivial
+	b.Ply = 100
 
 	// We need to trigger the update logic which happens in MakeMove or Unmarshal or we can call the check method if public (it's private).
 	// But we exposed the field. The field is updated in MakeMove.
@@ -21,8 +21,8 @@ func TestFiftyMoveRule(t *testing.T) {
 	// Starting position: 1. Nf3 is a knight move, no capture.
 	move := NewMove(Square(6), Square(21), EMPTY) // g1 -> f3
 
-	// Reset HalfMoves to 99 so that after this move it becomes 100
-	b.HalfMoves = 99
+	// Reset Ply to 99 so that after this move it becomes 100
+	b.Ply = 99
 	b.MakeMove(move)
 
 	require.True(t, b.IsFiftyMoveRule, "Should be 50 move rule enabled")
@@ -32,7 +32,7 @@ func TestFiftyMoveRule(t *testing.T) {
 
 func TestSeventyFiveMoveRule(t *testing.T) {
 	b := NewGame()
-	b.HalfMoves = 149
+	b.Ply = 149
 
 	b.GenerateLegalMoves()
 	move := NewMove(Square(6), Square(21), EMPTY) // g1 -> f3

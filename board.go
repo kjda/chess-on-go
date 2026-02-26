@@ -38,6 +38,7 @@ type Game struct {
 	Squares               [64]Piece
 	EnPassant             Square
 	Castling              int
+	Ply                   int
 	HalfMoves             int
 	FullMoves             int
 	Turn                  Color
@@ -68,6 +69,7 @@ func (g *Game) Reset() {
 	g.Squares = [64]Piece{}
 	g.EnPassant = 0
 	g.Castling = 0
+	g.Ply = 0
 	g.HalfMoves = 0
 	g.FullMoves = 0
 	g.Turn = WHITE
@@ -104,6 +106,7 @@ func CloneGame(g *Game) Game {
 		Occupied:        g.Occupied,
 		EnPassant:       g.EnPassant,
 		Castling:        g.Castling,
+		Ply:             g.Ply,
 		HalfMoves:       g.HalfMoves,
 		FullMoves:       g.FullMoves,
 		Turn:            g.Turn,
@@ -170,7 +173,7 @@ func (g *Game) ShouldIncFullMoves(m Move) bool {
 	return g.Squares[m.From()].Color() == BLACK
 }
 
-func (g *Game) ShouldResetPly(m Move) bool {
+func (g *Game) ShouldResetHalfMoves(m Move) bool {
 	return m.GetCapturedPiece() > 0 || g.Squares[m.From()].Kind() == PAWN
 }
 
@@ -274,17 +277,18 @@ func (g *Game) IsFivefoldRepetition() bool {
 }
 
 func (g *Game) checkFiftyMoveRule() bool {
-	return g.HalfMoves >= 100
+	return g.Ply >= 100
 }
 
 func (g *Game) checkSeventyFiveMoveRule() bool {
-	return g.HalfMoves >= 150
+	return g.Ply >= 150
 }
 
 type GameState struct {
 	CapturedPiece Piece
 	Castling      int
 	EnPassant     Square
+	Ply           int
 	HalfMoves     int
 	ZobristHash   uint64
 }
