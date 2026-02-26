@@ -272,6 +272,68 @@ func TestSAN(t *testing.T) {
 			moveTo:      "b4",
 			expectedSan: "R3b4",
 		},
+		// Disambiguation: two queens on different files (file disambiguation)
+		{
+			fen:         "7k/8/8/8/8/7K/8/3Q1Q2 w - - 0 1",
+			moveFrom:    "d1",
+			moveTo:      "e2",
+			expectedSan: "Qde2", // Qd1 and Qf1 can both reach e2. Different files.
+		},
+		{
+			fen:         "7k/8/8/8/8/7K/8/3Q1Q2 w - - 0 1",
+			moveFrom:    "f1",
+			moveTo:      "e2",
+			expectedSan: "Qfe2",
+		},
+		// Disambiguation: two queens on same file (rank disambiguation)
+		{
+			fen:         "7k/8/8/3Q4/8/8/8/3Q3K w - - 0 1",
+			moveFrom:    "d1",
+			moveTo:      "d3",
+			expectedSan: "Q1d3", // Qd1 and Qd5 on same file. Rank differs.
+		},
+		{
+			fen:         "7k/8/8/3Q4/8/8/8/3Q3K w - - 0 1",
+			moveFrom:    "d5",
+			moveTo:      "d3",
+			expectedSan: "Q5d3",
+		},
+		// Disambiguation: three queens, need full coordinates for one
+		{
+			// Queens on d1, d5, f1. All can reach d3.
+			// d1→d3: d5 shares file, f1 shares rank → need full coords "Qd1d3"
+			fen:         "7k/8/8/3Q4/8/7K/8/3Q1Q2 w - - 0 1",
+			moveFrom:    "d1",
+			moveTo:      "d3",
+			expectedSan: "Qd1d3",
+		},
+		{
+			// d5→d3: d1 shares file, f1 does not share file or rank → rank suffices "Q5d3"
+			fen:         "7k/8/8/3Q4/8/7K/8/3Q1Q2 w - - 0 1",
+			moveFrom:    "d5",
+			moveTo:      "d3",
+			expectedSan: "Q5d3",
+		},
+		{
+			// f1→d3: neither d1 nor d5 shares file f → file suffices "Qfd3"
+			fen:         "7k/8/8/3Q4/8/7K/8/3Q1Q2 w - - 0 1",
+			moveFrom:    "f1",
+			moveTo:      "d3",
+			expectedSan: "Qfd3",
+		},
+		// Disambiguation: two rooks on same rank (file disambiguation)
+		{
+			fen:         "7k/8/8/8/8/8/8/R3R2K w - - 0 1",
+			moveFrom:    "a1",
+			moveTo:      "c1",
+			expectedSan: "Rac1", // Ra1 and Re1 on same rank. File differs.
+		},
+		{
+			fen:         "7k/8/8/8/8/8/8/R3R2K w - - 0 1",
+			moveFrom:    "e1",
+			moveTo:      "c1",
+			expectedSan: "Rec1",
+		},
 		// Captures
 		{
 			fen:         "rnbqkbnr/ppp1pppp/8/3p4/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2",
